@@ -442,10 +442,10 @@ window.__ModuleLoader__.load({
     // localStorage by us.
     const PAPER_KEY = 'dsh-workbench:paper';
     const PAPER_TOKENS = {
-      '--dsw-alias-bg-base': '#f4efe3',
-      '--dsw-alias-bg-layer-1': '#efe9db',
-      '--dsw-alias-bg-layer-2': '#e7dfcd',
-      '--dsw-alias-bg-overlay': '#fbf7ee',
+      '--dsw-alias-bg-base': '#f7f3ea',
+      '--dsw-alias-bg-layer-1': '#f2ece0',
+      '--dsw-alias-bg-layer-2': '#ece5d6',
+      '--dsw-alias-bg-overlay': '#faf5e9',
       '--dsw-alias-border-l1': '#d8cfba',
       '--dsw-alias-border-l2': '#c6bba2',
       '--dsw-alias-brand-primary': '#8a6a45',
@@ -455,11 +455,33 @@ window.__ModuleLoader__.load({
       '--dsw-alias-state-warn-primary': '#a8792c',
       '--dsw-alias-state-success-primary': '#4f7a5a',
       '--dsw-alias-state-idle-primary': '#a49a89',
-      '--dsw-specific-sidebar-fill': '#efe9db',
+      '--dsw-specific-sidebar-fill': '#f2ece0',
       // Chat bubbles: the light base uses a pale DeepSeek blue, which looks
       // wrong on paper. These two are outside the alias layer.
-      '--dsw-specific-bubble': '#efe7d6',
-      '--dsw-specific-bubble-highlight': '#e4d8c0',
+      '--dsw-specific-bubble': '#f2ecdf',
+      '--dsw-specific-bubble-highlight': '#e9dfcb',
+      // Pale blue surfaces the alias list does not cover: command chips,
+      // reference pills, selected file tabs, "load earlier", tool cards.
+      '--dsw-alias-state-business-tertiary': '#f1e9da',
+      '--dsw-alias-state-business-primary': '#8a6a45',
+      '--dsw-specific-sidebar-nav-item-active-accent': '#f1e9da',
+      '--dsw-specific-sidebar-nav-item-active': '#efe9db',
+      '--dsw-specific-selector': '#f1e9da',
+      '--dsw-specific-input-major': '#f2ece0',
+      '--dsw-specific-tip': '#f7f2e7',
+      '--dsw-specific-menu': '#fcf9f3',
+      // The neutral greys are blue-tinted. Buttons ("load earlier"), inputs,
+      // chips and cards read their pale surfaces from this ramp, so warm it up
+      // too; deep steps stay untouched because they are text/borders.
+      '--dsw-static-neutral-bluish-00': '#fbf6ea',
+      '--dsw-static-neutral-bluish-50': '#faf6ee',
+      '--dsw-static-neutral-bluish-55': '#f8f4ea',
+      '--dsw-static-neutral-bluish-60': '#f7f3ea',
+      '--dsw-static-neutral-bluish-75': '#f4eee1',
+      '--dsw-static-neutral-bluish-90': '#f2ecdf',
+      '--dsw-static-neutral-bluish-100': '#efe9db',
+      '--dsw-static-neutral-bluish-150': '#ece6d7',
+      '--dsw-static-neutral-bluish-200': '#e7dfcd',
     };
 
     // Swatches double as both the current-state indicator and the toggle.
@@ -508,6 +530,11 @@ window.__ModuleLoader__.load({
           try { paperDispose(); } catch (_error) { /* already gone */ }
           paperDispose = null;
         }
+        // Marker for paper-only rules (code surfaces) that tokens cannot reach.
+        try {
+          if (on) document.body.setAttribute('data-wb-paper', '1');
+          else document.body.removeAttribute('data-wb-paper');
+        } catch (_error) { /* body not ready */ }
       }
 
       function ThemeSwitcher() {
@@ -1163,6 +1190,23 @@ div[data-row-key^="session:"]:has(svg[data-state="ongoing"]) svg[data-state="ong
 .dsh-glow-on [data-state="ongoing"],
 .dsh-glow-on > span:first-child > svg {
   display: none !important;
+}
+/* paper: every card-like surface follows the paper base; the code surface is
+   deeper and overrides the card rule below (same specificity, later wins). */
+body[data-wb-paper="1"] [class*="_tile"],
+body[data-wb-paper="1"] [class*="_card"],
+body[data-wb-paper="1"] [class*="_Card"],
+body[data-wb-paper="1"] [class*="_fileCard"],
+body[data-wb-paper="1"] [class*="hz8-rW_header"] {
+  background: #f2ece0 !important;
+}
+body[data-wb-paper="1"] .md-code-block,
+body[data-wb-paper="1"] pre,
+body[data-wb-paper="1"] [class*="_header_1mqf1"] {
+  background: #ece2cc !important;
+}
+body[data-wb-paper="1"] :not(pre) > code {
+  background: #efe6d4 !important;
 }
 `;
 
