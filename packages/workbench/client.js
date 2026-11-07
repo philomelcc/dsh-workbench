@@ -947,7 +947,6 @@ window.__ModuleLoader__.load({
 .dsh-glow-on {
   position: relative;
   border-radius: var(--dsw-radius-md, 8px);
-  animation: dsh-glow-breathe 2.8s ease-in-out infinite;
 }
 .dsh-glow-canvas {
   position: absolute;
@@ -964,37 +963,6 @@ div[data-row-key^="session:"]:has(svg[data-state="ongoing"]) svg[data-state="ong
 .dsh-glow-on [data-state="ongoing"],
 .dsh-glow-on > span:first-child > svg {
   display: none !important;
-}
-@keyframes dsh-glow-breathe {
-  0%, 100% {
-    box-shadow:
-      0 0 0 1px rgba(99, 149, 255, 0.5),
-      0 0 8px 1px rgba(99, 149, 255, 0.2);
-  }
-  50% {
-    box-shadow:
-      0 0 0 1px rgba(130, 178, 255, 0.85),
-      0 0 16px 2px rgba(99, 149, 255, 0.42);
-  }
-}
-/* 暗档：只有后台任务时，呼吸光也压到约 35% */
-.dsh-glow-on[data-glow-dim="1"] {
-  animation: dsh-glow-breathe-dim 2.8s ease-in-out infinite;
-}
-@keyframes dsh-glow-breathe-dim {
-  0%, 100% {
-    box-shadow:
-      0 0 0 1px rgba(99, 149, 255, 0.18),
-      0 0 4px 0 rgba(99, 149, 255, 0.07);
-  }
-  50% {
-    box-shadow:
-      0 0 0 1px rgba(130, 178, 255, 0.32),
-      0 0 8px 1px rgba(99, 149, 255, 0.15);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .dsh-glow-on { animation: none; }
 }
 `;
 
