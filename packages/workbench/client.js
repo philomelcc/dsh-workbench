@@ -435,84 +435,147 @@ window.__ModuleLoader__.load({
     }
 
     // ---------- theme switcher ----------
-    // `paper` builds on the light palette and overrides the alias layer only.
-    const PAPER_THEME = {
-      id: 'paper',
-      colorScheme: 'light',
-      tokens: {
-        '--dsw-alias-bg-base': '#f4efe3',
-        '--dsw-alias-bg-layer-1': '#efe9db',
-        '--dsw-alias-bg-layer-2': '#e7dfcd',
-        '--dsw-alias-bg-overlay': '#fbf7ee',
-        '--dsw-alias-border-l1': '#d8cfba',
-        '--dsw-alias-border-l2': '#c6bba2',
-        '--dsw-alias-brand-primary': '#8a6a45',
-        '--dsw-alias-label-primary': '#3b342a',
-        '--dsw-alias-label-secondary': '#6f6557',
-        '--dsw-alias-state-error-primary': '#a34a3c',
-        '--dsw-alias-state-warn-primary': '#a8792c',
-        '--dsw-alias-state-success-primary': '#4f7a5a',
-        '--dsw-alias-state-idle-primary': '#a49a89',
-        '--dsw-specific-sidebar-fill': '#efe9db',
-      },
+    // `paper` cannot be a persisted preference: DSH only accepts light / dark /
+    // system there, and anything else is dropped when settings resync (that is
+    // why switching models used to fall back to dark). So the paper palette is
+    // an override layer on top of the legal `light` preference, remembered in
+    // localStorage by us.
+    const PAPER_KEY = 'dsh-workbench:paper';
+    const PAPER_TOKENS = {
+      '--dsw-alias-bg-base': '#f4efe3',
+      '--dsw-alias-bg-layer-1': '#efe9db',
+      '--dsw-alias-bg-layer-2': '#e7dfcd',
+      '--dsw-alias-bg-overlay': '#fbf7ee',
+      '--dsw-alias-border-l1': '#d8cfba',
+      '--dsw-alias-border-l2': '#c6bba2',
+      '--dsw-alias-brand-primary': '#8a6a45',
+      '--dsw-alias-label-primary': '#3b342a',
+      '--dsw-alias-label-secondary': '#6f6557',
+      '--dsw-alias-state-error-primary': '#a34a3c',
+      '--dsw-alias-state-warn-primary': '#a8792c',
+      '--dsw-alias-state-success-primary': '#4f7a5a',
+      '--dsw-alias-state-idle-primary': '#a49a89',
+      '--dsw-specific-sidebar-fill': '#efe9db',
     };
 
     // Swatches double as both the current-state indicator and the toggle.
     const THEME_SWATCHES = [
-      { id: 'dark', label: '深色', color: '#15171a' },
-      { id: 'light', label: '浅色', color: '#f7f8fa' },
-      { id: 'paper', label: '纸质', color: '#f4efe3' },
+      { id: 'dark', label: '深色', color: '#15171a', ring: 'rgba(255,255,255,0.28)' },
+      { id: 'light', label: '浅色', color: '#f7f8fa', ring: 'rgba(0,0,0,0.35)' },
+      { id: 'paper', label: '纸质', color: '#efe4cd', ring: 'rgba(0,0,0,0.28)' },
     ];
 
     function createThemeSwitcher(ctx) {
-      function ThemeSwitcher() {
-        const theme = typeof ctx.get === 'function' ? ctx.get('theme') : ctx.theme;
-        const read = () => {
-          try {
-            const snapshot = theme && typeof theme.getTheme === 'function' ? theme.getTheme() : null;
-            return snapshot ? snapshot.preference : null;
-          } catch (_error) {
-            return null;
-          }
-        };
-        const [preference, setPreference] = React.useState(read);
+      const readPreference = () => {
+        try {
+          const theme = typeof ctx.get === 'function' ? ctx.get('theme') : ctx.theme;
+          const snapshot = theme && typeof theme.getTheme === 'function' ? theme.getTheme() : null;
+          return snapshot ? snapshot.preference : null;
+        } catch (_error) {
+          return null;
+        }
+      };
+      const readPaper = () => {
+        try { return window.localStorage.getItem(PAPER_KEY) === '1'; } catch (_error) { return false; }
+      };
+      const writePaper = (on) => {
+        try { window.localStorage.setItem(PAPER_KEY, on ? '1' : '0'); } catch (_error) { /* storage unavailable */ }
+      };
 
+      let paperDispose = null;
+      function setPaper(on) {
+        const theme = typeof ctx.get === 'function' ? ctx.get('theme') : ctx.theme;
+        if (!theme) return;
+        if (on) {
+          if (paperDispose) return;
+          // Legal persisted preference first, then paint the paper layer on top.
+          try { theme.setTheme('light'); } catch (error) { console.warn('[workbench] setTheme light failed', error); }
+          const modes = {};
+          Object.keys(PAPER_TOKENS).forEach((name) => {
+            modes[name] = { light: PAPER_TOKENS[name], dark: PAPER_TOKENS[name] };
+          });
+          try {
+            paperDispose = typeof theme.overrideTokens === 'function' ? theme.overrideTokens('workbench:paper', modes) : null;
+          } catch (error) {
+            console.warn('[workbench] paper override failed', error);
+            paperDispose = null;
+          }
+        } else if (paperDispose) {
+          try { paperDispose(); } catch (_error) { /* already gone */ }
+          paperDispose = null;
+        }
+      }
+
+      function ThemeSwitcher() {
+        const [paper, setPaperState] = React.useState(readPaper);
+        const [preference, setPreference] = React.useState(readPreference);
+
+        // Re-apply the saved paper layer after a reload / remount.
         React.useEffect(() => {
-          if (!theme || typeof theme.getTheme !== 'function' || typeof ctx.on !== 'function') return undefined;
+          if (readPaper()) setPaper(true);
+        }, []);
+
+        // Swatches only re-render on real preference changes; the paper layer is
+        // local state because the theme service does not know about it.
+        React.useEffect(() => {
+          if (typeof ctx.on !== 'function') return undefined;
           let off = null;
           try {
-            off = ctx.on('theme/change', () => setPreference(read()));
+            off = ctx.on('theme/change', () => {
+              const next = readPreference();
+              setPreference(next);
+              // Somebody picked a concrete palette in DSH's own settings: drop the layer.
+              if (next && next !== 'light' && paper) {
+                setPaper(false);
+                writePaper(false);
+                setPaperState(false);
+              }
+            });
           } catch (_error) {
             off = null;
           }
           return () => { if (typeof off === 'function') off(); };
-        }, []);
+        }, [paper]);
+
+        const activeId = paper ? 'paper' : (preference === 'dark' ? 'dark' : 'light');
+
+        const choose = (id) => {
+          const theme = typeof ctx.get === 'function' ? ctx.get('theme') : ctx.theme;
+          if (!theme) return;
+          if (id === 'paper') {
+            setPaper(true);
+            writePaper(true);
+            setPaperState(true);
+            return;
+          }
+          setPaper(false);
+          writePaper(false);
+          setPaperState(false);
+          try { theme.setTheme(id); } catch (error) { console.warn('[workbench] setTheme failed', error); }
+        };
 
         return h('div', {
-          style: { display: 'inline-flex', alignItems: 'center', gap: 7, flex: '0 0 auto' },
+          style: { display: 'inline-flex', alignItems: 'center', gap: 8, flex: '0 0 auto' },
           title: '主题',
         },
           THEME_SWATCHES.map((swatch) => {
-            const active = preference === swatch.id;
+            const active = activeId === swatch.id;
             return h('button', {
               key: swatch.id,
               type: 'button',
               title: swatch.label,
               'aria-label': swatch.label,
               'aria-pressed': active ? 'true' : 'false',
-              onClick: () => {
-                if (!theme || typeof theme.setTheme !== 'function') return;
-                try { theme.setTheme(swatch.id); } catch (error) { console.warn('[workbench] setTheme failed', error); }
-              },
+              onClick: () => choose(swatch.id),
               style: {
-                width: 15, height: 15, padding: 0, borderRadius: '50%', flex: '0 0 auto',
+                width: 17, height: 17, padding: 0, borderRadius: '50%', flex: '0 0 auto',
                 background: swatch.color,
-                border: '1px solid ' + (active ? 'var(--dsw-alias-brand-primary)' : 'var(--dsw-alias-border-l2)'),
-                boxShadow: active
-                  ? '0 0 0 2px var(--dsw-alias-bg-base), 0 0 0 3px var(--dsw-alias-brand-primary)'
-                  : 'none',
+                // A hairline ring keeps the dark swatch readable on a dark bar;
+                // the selected one only thickens and takes the brand color.
+                border: (active ? '1.5px' : '1px') + ' solid ' + (active ? 'var(--dsw-alias-brand-primary)' : swatch.ring),
+                boxSizing: 'border-box',
                 cursor: 'pointer',
-                transition: 'box-shadow .12s, border-color .12s',
+                transition: 'border-color .12s, border-width .12s',
               },
             });
           }),
@@ -1328,16 +1391,6 @@ div[data-row-key^="session:"]:has(svg[data-state="ongoing"]) svg[data-state="ong
 
         layoutService = ctx.get('layout') || null;
         layoutGetter = () => ctx.get('layout') || null;
-
-        // Extra palette on top of the built-in light/dark pair.
-        try {
-          const themeService = typeof ctx.get === 'function' ? ctx.get('theme') : null;
-          if (themeService && typeof themeService.register === 'function') {
-            ctx.effect(() => themeService.register(PAPER_THEME), 'workbench: paper theme');
-          }
-        } catch (error) {
-          console.warn('[workbench] paper theme registration failed', error);
-        }
 
         // The shell's own overview lives above the tab row: it is reachable from
         // the top-bar "工作台" icon, so it registers a page without a tab.

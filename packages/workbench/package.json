@@ -1,6 +1,6 @@
 {
   "name": "@philomelcc/dsh-workbench",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "type": "module",
   "description": "Workbench shell for DeepSeek Harness: a view/page module API, shared UI primitives and a top-bar switcher.",
   "license": "MIT",
