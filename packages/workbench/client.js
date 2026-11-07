@@ -1208,6 +1208,19 @@ body[data-wb-paper="1"] [class*="_header_1mqf1"] {
 body[data-wb-paper="1"] :not(pre) > code {
   background: #efe6d4 !important;
 }
+/* Session hover preview ships white-on-dark copy; invert it on paper. */
+body[data-wb-paper="1"] [class*="_hoverTitle"] {
+  color: #2f2a22 !important;
+}
+body[data-wb-paper="1"] [class*="_hoverStatus"] {
+  color: #6f6557 !important;
+}
+body[data-wb-paper="1"] [class*="_hoverTime"] {
+  color: #8a7f6e !important;
+}
+body[data-wb-paper="1"] [class*="_hoverPath"] {
+  color: #6f6557 !important;
+}
 `;
 
     function installGlow(ctx) {
