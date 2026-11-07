@@ -1,35 +1,32 @@
 # @philomelcc/dsh-status-monitor
 
-Workbench module: four live cards — disk, CPU/memory/GPU, ports, session usage —
-each expandable to the full central area.
+工作台模块：四张实时卡片——磁盘、CPU/内存/GPU、端口、会话用量，每张都能放大到整个中央区域。
 
-![Status monitor](../../docs/screenshot.png)
+![状态监控](../../docs/screenshot.png)
 
-## Install
+## 安装
 
 ```powershell
 dsh plugin --profile web add @philomelcc/dsh-workbench
 dsh plugin --profile web add @philomelcc/dsh-status-monitor
 ```
 
-Restart the Web UI; the module adds the **状态监控 / Status** tab.
+重启 Web UI，模块会加出**状态监控**标签。
 
-## What it reads
+## 数据来源
 
-| card | source |
+| 卡片 | 来源 |
 |---|---|
-| Disk | `fs.statfs` per volume |
-| CPU / memory | `os` sampling, one tick per 2 s |
-| GPU | `nvidia-smi` when present, silently skipped otherwise |
-| Ports | its own `/wb/status/ports` route (fast path, separate from the port monitor's slower scan) |
-| Usage | session token/cost data folded from the local session log |
+| 磁盘 | 逐卷 `fs.statfs` |
+| CPU / 内存 | `os` 采样，2 秒一拍 |
+| GPU | 有 `nvidia-smi` 时读取，没有就静默跳过 |
+| 端口 | 自己的 `/wb/status/ports` 快路径（不走端口监控模块的慢扫描） |
+| 用量 | 从本地会话日志折叠出的 token / 成本 |
 
-All sampling happens in the Host half on Windows; endpoints live under
-`/wb/status/...` and answer loopback only.
+采样都在 Host 半、Windows 上完成；端点挂在 `/wb/status/...` 下，只允许回环访问。
 
-## Requirements
+## 要求
 
-Windows for the full set (process/disk telemetry). The page degrades card by
-card: a missing endpoint shows "unavailable" in that card only.
+完整功能需要 Windows（进程/磁盘遥测）。页面按卡片降级：某个端点挂了，只有那张卡显示「未接入」。
 
-MIT.
+MIT。

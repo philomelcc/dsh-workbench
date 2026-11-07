@@ -1,71 +1,63 @@
 # @philomelcc/dsh-downloads
 
-Workbench module: a real download queue — progress, pause/resume/cancel, magnet
-links, Chrome default-download takeover, and a per-session record of what was
-downloaded.
+工作台模块：一个真正的下载队列——进度、暂停/继续/取消、磁力链接、Chrome 默认下载接管，以及每个会话下载过什么的记录。
 
-## Install
+## 安装
 
 ```powershell
 dsh plugin --profile web add @philomelcc/dsh-workbench
 dsh plugin --profile web add @philomelcc/dsh-downloads
 ```
 
-Restart the Web UI; the module adds the **下载 / Downloads** tab.
+重启 Web UI，模块会加出**下载**标签。
 
-## Engines
+## 引擎
 
-| source | engine |
+| 来源 | 引擎 |
 |---|---|
-| magnet / `.torrent` | aria2 (DHT + LPD, `--seed-time=0`) |
-| HTTP / HTTPS | Xunlei P2SP when an API key is configured, otherwise aria2 with 16 connections |
+| 磁力 / `.torrent` | aria2（DHT + LPD，`--seed-time=0`） |
+| HTTP / HTTPS | 配了 API Key 时走迅雷 P2SP，否则 aria2 16 连接 |
 
-The module does **not** bundle aria2 — it is GPLv2 and a 5 MB binary. Install it
-yourself and the module finds it automatically:
+本包**不自带 aria2**（GPLv2，5 MB 的二进制）。自己装好后模块会自动找到：
 
-1. `ARIA2C_PATH` environment variable pointing at the executable, or
-2. a cached copy at `~/.dsh/download-center/bin/aria2c[.exe]`, or
-3. `winget install aria2.aria2` / `scoop install aria2` and restart.
+1. 环境变量 `ARIA2C_PATH` 指向可执行文件，或
+2. 缓存副本 `~/.dsh/download-center/bin/aria2c[.exe]`，或
+3. `winget install aria2.aria2` / `scoop install aria2` 后重启。
 
-Without aria2 the page still opens; magnet transfers fail with a readable error
-and `/wb/downloads/health` reports why.
+没有 aria2 时页面照样能开；磁力会给出可读错误，`/wb/downloads/health` 会说明原因。
 
-The Xunlei engine is optional and is **not** a package dependency (it pulls a
-native module that needs a build approval on install). Install it yourself if
-you have an API key:
+迅雷引擎是**可选的，也不是依赖**（它带一个需要构建批准的原生模块）。有 API Key 就自己装：
 
 ```powershell
 npm i @xunlei-open/dlsdk @xunlei-open/dlsdk-native-windows-x64
 ```
 
-Credentials go in `~/.dsh/secrets/xunlei.txt`. Without the SDK, magnet/HTTP
-downloads still work through aria2 and the Xunlei engine reports a readable
-error instead of breaking the page.
+凭据放在 `~/.dsh/secrets/xunlei.txt`。没装 SDK 时磁力/HTTP 走 aria2，迅雷引擎给出可读错误，不影响页面。
 
-## Endpoints
+## 端点
 
-| method | path | body |
+| 方法 | 路径 | 请求体 |
 |---|---|---|
-| GET | `/wb/downloads/list` | — (tasks + stats) |
-| GET | `/wb/downloads/history` | — (session records) |
-| GET | `/wb/downloads/health` | — (engine paths, default dir) |
+| GET | `/wb/downloads/list` | —（任务 + 统计） |
+| GET | `/wb/downloads/history` | —（会话记录） |
+| GET | `/wb/downloads/health` | —（引擎路径、默认目录） |
 | POST | `/wb/downloads/create` | `{ url, dir?, fileName?, backend? }` |
 | POST | `/wb/downloads/pause` · `resume` · `cancel` · `remove` | `{ id }` |
 | POST | `/wb/downloads/open` | `{ id, kind: 'file' \| 'dir' }` |
-| POST | `/wb/downloads/register` | `{ … }` — used by the `fast_download` tool |
+| POST | `/wb/downloads/register` | `{ … }` —— 供 `fast_download` 工具登记 |
 
-All routes accept loopback only.
+所有路由只接受回环访问。
 
-## Layout
+## 结构
 
 ```
-index.js            Host: routes above
-client.js           Client: the page + registerView('downloads')
-lib/tasks.js        task table, state machine, persistence, history
-lib/engines.js      aria2 / Xunlei subprocess engines and progress parsing
-lib/xunlei*.mjs     Xunlei worker (separate process; a dll crash does not take the host down)
-chrome-extension/   optional Chrome default-download takeover
-test/               client-side smoke test
+index.js            Host：上面的路由
+client.js           Client：页面 + registerView('downloads')
+lib/tasks.js        任务表、状态机、持久化、历史记录
+lib/engines.js      aria2 / 迅雷子进程引擎与进度解析
+lib/xunlei*.mjs     迅雷 worker（独立进程，dll 崩了不带走 host）
+chrome-extension/   可选的 Chrome 默认下载接管扩展
+test/               client 侧冒烟测试
 ```
 
-MIT. aria2 and the Xunlei SDK keep their own licenses.
+MIT。aria2 和迅雷 SDK 保持各自许可。

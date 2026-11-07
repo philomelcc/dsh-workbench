@@ -1,27 +1,27 @@
-# DSH Workbench
+# DSH 工作台
 
 ![ci](https://github.com/philomelcc/dsh-workbench/actions/workflows/ci.yml/badge.svg)
 
-A tabbed workspace shell for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness). Each module is one page in a second top-bar row — status monitor, download center, or anything you build against the same small contract.
+给 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 加一层带标签页的工作区外壳。顶部第二行是工作台切换页，每个模块占一整页——状态监控、下载中心，或者你按同一份契约写的任何页面。
 
-![Workbench](docs/screenshot.png)
+![工作台](docs/screenshot.png)
 
-## Why
+## 为什么
 
-DeepSeek Harness ships a conversation-centric Web UI. This project turns it into a workspace: a fixed system bar on top (brand, global icons, account, balance, restart), a workbench switcher underneath, and the conversation area below. Every module gets a full page of the central area while the session list on the left keeps working.
+DeepSeek Harness 的 Web UI 以会话为中心。这个项目把它变成工作区：顶部固定系统栏（品牌、全局图标、账号、余额、重启），下面是工作台切换页，再往下是会话区。每个模块拿到中央区域的整页，左侧会话列表照常可用。
 
-The shell is deliberately thin — it owns layout, the tab row and a handful of UI primitives. Modules own their data and their page. They never import each other, and they talk to the shell through one runtime service.
+外壳刻意做得很薄——只负责布局、标签行和几个 UI 原语。模块自己管数据、自己画页面，彼此不 import，只通过一个运行时服务跟外壳对话。
 
-## Packages
+## 包含的包
 
-| package | what it is |
+| 包 | 说明 |
 |---|---|
-| [`@philomelcc/dsh-workbench`](packages/workbench) | the shell: module API, top bar, tab switcher, overview page, shared components |
-| [`@philomelcc/dsh-status-monitor`](packages/status-monitor) | disk / hardware / ports / usage cards with a full-page zoom |
-| [`@philomelcc/dsh-downloads`](packages/download-center) | download tasks with aria2 + Xunlei backends, magnet links, session history |
-| [`@philomelcc/dsh-port-monitor`](packages/port-monitor) | reference module: listening ports, processes, one-click open |
+| [`@philomelcc/dsh-workbench`](packages/workbench) | 外壳：模块 API、顶部栏、标签切换、总览页、公共组件 |
+| [`@philomelcc/dsh-status-monitor`](packages/status-monitor) | 磁盘 / 硬件 / 端口 / 用量四张卡片，支持放大到整页 |
+| [`@philomelcc/dsh-downloads`](packages/download-center) | 下载队列（aria2 + 迅雷双引擎）、磁力链接、会话下载记录 |
+| [`@philomelcc/dsh-port-monitor`](packages/port-monitor) | 参考模块：监听端口、所属进程、一键打开 |
 
-## Install
+## 安装
 
 ```powershell
 dsh plugin --profile web add @philomelcc/dsh-workbench
@@ -29,13 +29,13 @@ dsh plugin --profile web add @philomelcc/dsh-status-monitor
 dsh plugin --profile web add @philomelcc/dsh-downloads
 ```
 
-Restart the Web UI once. The workbench tabs appear on the second top-bar row. Details, manual install and troubleshooting are in [docs/getting-started.md](docs/getting-started.md).
+装完重启一次 Web UI，标签就出现在顶部第二行。手动安装、故障排查见[《快速开始》](docs/getting-started.md)。
 
-The download center needs [aria2](https://aria2.github.io/) for HTTP/magnet/torrent transfers — the repo does not ship the binary (it is GPLv2). Install it with `winget install aria2.aria2`, or point `ARIA2C_PATH` at an existing executable.
+下载中心需要 [aria2](https://aria2.github.io/) 才能下 HTTP/磁力/种子——仓库不带这个二进制（GPLv2）。用 `winget install aria2.aria2` 装，或者把 `ARIA2C_PATH` 指到已有的可执行文件。
 
-## Build a module
+## 写一个模块
 
-The whole contract is one page: [docs/SPEC.md](docs/SPEC.md).
+完整契约就一页：[docs/SPEC.md](docs/SPEC.md)。
 
 ```js
 const wb = ctx.get('workbench');
@@ -49,26 +49,27 @@ ctx.effect(() => wb.registerView({
 }), 'my-module: view');
 ```
 
-Copy [`template/`](template) to start, or read [`packages/port-monitor`](packages/port-monitor) as a complete example. Shell and modules version independently: a module built for `apiVersion 1` keeps working across shell releases that still report `1`.
+从 [`template/`](template) 复制起步，或者直接读 [`packages/port-monitor`](packages/port-monitor) 这个最小完整例子。外壳和模块独立发版：按 `apiVersion 1` 写的模块，在仍然声明 `1` 的外壳上都能用。
 
-## Repository layout
+## 仓库结构
 
 ```
-packages/workbench         the shell bundle
-packages/status-monitor    official module
-packages/download-center   official module
-packages/port-monitor      reference module
-template/                  copy-me starting point for a new module
-docs/                      SPEC, getting started, module registry
-scripts/check.mjs          node --check across every shipped script
+packages/workbench         外壳
+packages/status-monitor    官方模块
+packages/download-center   官方模块
+packages/port-monitor      参考模块
+template/                  复制即用的模块起点
+docs/                      契约、快速开始、模块登记、发布流程
+scripts/check.mjs          对全部脚本跑 node --check
 ```
 
-## Notes
+## 说明
 
-- Windows is the primary target: port and disk sampling read Windows data. The shell and the module API are platform-neutral.
-- `npm run check` syntax-checks every shipped script; CI runs it on Linux and Windows.
-- Plugins are installed into a DSH profile; nothing here patches the Harness itself.
+- 主要面向 Windows：端口和磁盘采样读的是 Windows 数据。外壳和模块 API 本身跨平台。
+- `npm run check` 对所有要发布的脚本做语法检查，CI 在 Linux 和 Windows 各跑一次。
+- 插件装进 DSH 的 profile，不会改动 Harness 本体。
+- 英文版 README 见 [README.en.md](README.en.md)。
 
-## License
+## 许可证
 
-MIT. Third-party engines keep their own licenses: aria2 (GPLv2) is installed separately, and the Xunlei SDK is pulled from npm by the download center.
+MIT。第三方引擎保持各自许可：aria2（GPLv2）由用户自行安装，迅雷 SDK 由下载中心按需从 npm 获取。

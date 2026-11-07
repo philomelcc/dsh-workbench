@@ -1,35 +1,32 @@
-# Module template
+# 模块模板
 
-Copy this directory to start a workbench module. It already contains the minimum
-a module needs: a bundle declaration, one patch row, a placeholder Host route and
-a placeholder page.
+复制这个目录来做新的工作台模块。里面已经有模块最少需要的东西：bundle 声明、一条 patch 记录、一个占位 Host 路由和一个占位页面。
 
-## 1. Rename four things
+## 1. 改四处名字
 
-| file | what to change |
+| 文件 | 改什么 |
 |---|---|
-| `package.json` | `name` → `@your-scope/dsh-<module>` |
-| `cordis.patch.yml` | `id` → `<module>` (short), `name` → the package name |
-| `client.js` | the `id:` at the very top → the package name |
-| `client.js` | `registerView({ id, title, … })` → `<module>` + a human title |
+| `package.json` | `name` → `@你的scope/dsh-<module>` |
+| `cordis.patch.yml` | `id` → `<module>`（短名），`name` → 包名 |
+| `client.js` | 最顶部的 `id:` → 包名 |
+| `client.js` | `registerView({ id, title, … })` → `<module>` + 一个中文标题 |
 
-The entry id and the package name must match — DSH resolves the bundle by that
-string. View ids are short (`my-module`), package names are scoped
-(`@your-scope/dsh-my-module`).
+入口 id 和包名必须一致——DSH 用那个字符串解析 bundle。视图 id 是短名（`my-module`），包名带 scope（`@your-scope/dsh-my-module`）。
 
-## 2. Fill in the halves
+## 2. 填两半
 
-- `index.js` — Host half. Add `/wb/<module>/<verb>` routes; responses are
-  `{ ok: true, at, … }`. Keep Node APIs here, never in `client.js`.
-- `client.js` — Client half. Replace `MyView` with the page. It owns its layout
-  (padding, scrolling); the shell gives it the whole central area.
+- `index.js` —— Host 半。加 `/wb/<module>/<verb>` 路由，响应是 `{ ok: true, at, … }`。Node API 只放这里，别放进 `client.js`。
+- `client.js` —— Client 半。把 `MyView` 换成你的页面。页面自己管布局（内边距、滚动），外壳把整个中央区域给它。
 
-## 3. Install and verify
+## 3. 安装并验证
 
 ```powershell
 node --check index.js; node --check client.js
-dsh plugin --profile web add <path to this folder>
+dsh plugin --profile web add <这个目录的路径>
 ```
 
-Restart the Web UI, then click the new tab. `docs/SPEC.md` explains every field
-and the rules the shell expects; `packages/port-monitor` is a complete example.
+重启 Web UI，点开新标签。`docs/SPEC.md` 讲了每个字段和外壳的规矩；`packages/port-monitor` 是完整例子。
+
+## 4. 验证通过再发布
+
+界面还在调的时候用 `dsh plugin add <目录>` 热载，别发版；确认能用之后才 `npm publish --access public`，并把一行登记加进 `docs/registry.md`。细节见 `docs/publishing.md`。

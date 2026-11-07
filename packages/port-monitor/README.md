@@ -1,30 +1,25 @@
 # @philomelcc/dsh-port-monitor
 
-Reference workbench module — the smallest complete example in this repo. Use it
-as the model when you build your own: one Host route, one page, one
-`registerView`.
+参考模块——仓库里最小的完整例子。自己写模块时照它抄：一个 Host 路由、一个页面、一次 `registerView`。
 
-## Install
+## 安装
 
 ```powershell
 dsh plugin --profile web add @philomelcc/dsh-workbench
 dsh plugin --profile web add @philomelcc/dsh-port-monitor
 ```
 
-## What it does
+## 做什么
 
-Lists listening TCP ports with their owning process, marks reachability, opens
-HTTP services in the browser, and lets you star ports as "常用" (the status
-monitor's port card shows starred ports first).
+列出正在监听的 TCP 端口及所属进程，标记可达性，一键在浏览器里打开 HTTP 服务，还能把端口标成「常用」（状态监控的端口卡片会优先显示标星的）。
 
-## Shape
+## 结构
 
 ```
-index.js   Host: /wb/port-monitor/list  → { ok, at, ports: [{ port, pid, name, address, reachable, http }] }
-client.js  Client: the page + registerView({ id: 'port-monitor' })
+index.js   Host：/wb/port-monitor/list → { ok, at, ports: [{ port, pid, name, address, reachable, http }] }
+client.js  Client：页面 + registerView({ id: 'port-monitor' })
 ```
 
-`index.js` is not called by the page through any shared code — it is a plain
-`ctx.webServer.register` route, which is all a module needs to expose data.
+`index.js` 和页面之间没有任何共享代码——就是一个 `ctx.webServer.register` 路由，模块要暴露数据有这就够了。
 
-MIT.
+MIT。
