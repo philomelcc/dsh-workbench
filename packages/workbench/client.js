@@ -470,6 +470,11 @@ window.__ModuleLoader__.load({
       '--dsw-specific-input-major': '#f2ece0',
       '--dsw-specific-tip': '#f7f2e7',
       '--dsw-specific-menu': '#fcf9f3',
+      // Scrollbars read their own alias pair and default to neutral grey.
+      '--dsw-alias-scrollbar-bg-l1': '#d8cfba',
+      '--dsw-alias-scrollbar-bg-l2': '#d8cfba',
+      '--dsw-alias-scrollbar-hover-l1': '#c6bba2',
+      '--dsw-alias-scrollbar-hover-l2': '#c6bba2',
       // The neutral greys are blue-tinted. Buttons ("load earlier"), inputs,
       // chips and cards read their pale surfaces from this ramp, so warm it up
       // too; deep steps stay untouched because they are text/borders.
