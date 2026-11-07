@@ -18,6 +18,7 @@
   },
   "scripts": {
     "check": "node scripts/check.mjs",
-    "publish:all": "pnpm -r publish --access public"
+    "publish:check": "node scripts/publish.mjs",
+    "publish:all": "node scripts/publish.mjs --publish"
   }
 }

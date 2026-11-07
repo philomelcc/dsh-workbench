@@ -1,5 +1,7 @@
 # DSH Workbench
 
+![ci](https://github.com/philomelcc/dsh-workbench/actions/workflows/ci.yml/badge.svg)
+
 A tabbed workspace shell for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness). Each module is one page in a second top-bar row — status monitor, download center, or anything you build against the same small contract.
 
 ![Workbench](docs/screenshot.png)
