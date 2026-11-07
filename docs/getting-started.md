@@ -76,5 +76,8 @@ through DSH's client HMR while you work.
    the `id` at the top of `client.js`, and the `registerView({ id, title })`.
 4. Implement `index.js` (data) and `client.js` (page).
 5. `npm run check`, install it, restart, click the tab.
+6. Only after it works: `npm publish --access public`, then add a row to
+   [registry.md](registry.md). See
+   [publishing.md](publishing.md#publishing-a-module-yours-or-a-new-official-one).
 
 `packages/port-monitor` is the smallest complete example; copy it when in doubt.

@@ -140,6 +140,22 @@ package name; DSH resolves the bundle by that string.
   service, not an import.
 - Shell and modules version independently: shell `0.x`, each module its own.
 
+## Shipping a module
+
+Every module — official or third-party — ships as its own npm package:
+
+- name `@<scope>/dsh-<module>`, `publishConfig.access = "public"`, and a `files`
+  list that carries every file the module loads at runtime;
+- **verify it locally before publishing** (`dsh plugin add <dir>`, click the tab,
+  check the console) — an npm version cannot be taken back cleanly, so iterate
+  with a link while the UI is still moving;
+- `npm publish --access public`;
+- open a PR that adds a row to [registry.md](registry.md) so others can find it.
+
+The full checklist — monorepo releases vs. a standalone repository, versioning,
+and the pre-publish dry run — is in
+[publishing.md](publishing.md#publishing-a-module-yours-or-a-new-official-one).
+
 ## Reference modules
 
 `packages/port-monitor` is the smallest complete module and the recommended

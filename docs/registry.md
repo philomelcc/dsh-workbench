@@ -15,6 +15,9 @@ Rules for listing a module:
   modules' ids;
 - it keeps host data under `/wb/<module>/...`;
 - it checks `wb.apiVersion` on start and degrades instead of crashing;
-- it does not require a patched shell.
+- it does not require a patched shell;
+- it is published to npm (or installable from a git checkout), so other people
+  can add it with `dsh plugin add <package>`.
 
-Third-party modules stay in their own repositories; the table is the index.
+Third-party modules stay in their own repositories; the table is the index. The
+publishing checklist is in [publishing.md](publishing.md#publishing-a-module-yours-or-a-new-official-one).
