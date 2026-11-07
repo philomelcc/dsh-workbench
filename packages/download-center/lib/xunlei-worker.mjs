@@ -17,7 +17,21 @@
  *   {"type":"done","stateCode":8}
  *   {"type":"failed","code":123,"detail":"..."}
  */
-import dlsdk from "@xunlei-open/dlsdk";
+let dlsdk;
+try {
+  // 可选依赖：aria2 已能覆盖 HTTP/磁力，迅雷引擎只在用户自己装了 SDK 时可用。
+  dlsdk = (await import("@xunlei-open/dlsdk")).default;
+} catch {
+  process.stdout.write(
+    `${JSON.stringify({
+      type: "failed",
+      code: -1,
+      detail:
+        "迅雷引擎未安装。需要它的话执行：npm i @xunlei-open/dlsdk @xunlei-open/dlsdk-native-windows-x64（或改用 aria2）",
+    })}\n`
+  );
+  process.exit(1);
+}
 
 // @xunlei-open/dlsdk 是 CJS 包，ESM 下只能走 default 再解构。
 const {

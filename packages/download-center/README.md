@@ -30,9 +30,17 @@ yourself and the module finds it automatically:
 Without aria2 the page still opens; magnet transfers fail with a readable error
 and `/wb/downloads/health` reports why.
 
-The Xunlei engine is optional: it needs credentials in
-`~/.dsh/secrets/xunlei.txt`. The `/wb/downloads/health` route reports the
-resolved engine paths.
+The Xunlei engine is optional and is **not** a package dependency (it pulls a
+native module that needs a build approval on install). Install it yourself if
+you have an API key:
+
+```powershell
+npm i @xunlei-open/dlsdk @xunlei-open/dlsdk-native-windows-x64
+```
+
+Credentials go in `~/.dsh/secrets/xunlei.txt`. Without the SDK, magnet/HTTP
+downloads still work through aria2 and the Xunlei engine reports a readable
+error instead of breaking the page.
 
 ## Endpoints
 

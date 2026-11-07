@@ -1,6 +1,6 @@
 {
   "name": "@philomelcc/dsh-downloads",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "type": "module",
   "description": "Download manager for the DSH workbench: task queue with progress, pause and resume, and a per-session history.",
   "license": "MIT",
@@ -46,9 +46,5 @@
         "@deepseek-ai/dsh-client-ui-sidebar"
       ]
     }
-  },
-  "dependencies": {
-    "@xunlei-open/dlsdk": "^1.0.3",
-    "@xunlei-open/dlsdk-native-windows-x64": "^1.0.3"
   }
 }
