@@ -1,0 +1,40 @@
+{
+  "name": "@philomelcc/dsh-workbench",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Workbench shell for DeepSeek Harness: a view/page module API, shared UI primitives and a top-bar switcher.",
+  "license": "MIT",
+  "author": "philomelcc",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/philomelcc/dsh-workbench.git",
+    "directory": "packages/workbench"
+  },
+  "homepage": "https://github.com/philomelcc/dsh-workbench#readme",
+  "bugs": {
+    "url": "https://github.com/philomelcc/dsh-workbench/issues"
+  },
+  "keywords": ["dsh", "deepseek-harness", "workbench", "plugin", "web-ui"],
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": ["index.js", "client.js", "cordis.patch.yml", "locale/*.json", "icon.svg"],
+  "publishConfig": {
+    "access": "public"
+  },
+  "dsh": {
+    "bundle": { "patch": "./cordis.patch.yml" },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-client-ui-sidebar",
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-chat"
+      ]
+    }
+  }
+}

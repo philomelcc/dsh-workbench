@@ -1,0 +1,7 @@
+packages:
+  - "packages/*"
+
+# koffi ships prebuilt binaries but declares an install script; pnpm needs the
+# package explicitly allowed or it refuses the workspace install.
+allowBuilds:
+  koffi: true

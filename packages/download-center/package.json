@@ -1,0 +1,53 @@
+{
+  "name": "@philomelcc/dsh-download-center",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Download center for the DSH workbench: task list, magnet links, Chrome default-download takeover and per-session download history.",
+  "license": "MIT",
+  "author": "philomelcc",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/philomelcc/dsh-workbench.git",
+    "directory": "packages/download-center"
+  },
+  "homepage": "https://github.com/philomelcc/dsh-workbench#readme",
+  "bugs": {
+    "url": "https://github.com/philomelcc/dsh-workbench/issues"
+  },
+  "keywords": ["dsh", "deepseek-harness", "workbench", "download", "aria2", "magnet"],
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "lib",
+    "chrome-extension",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-client-ui-sidebar"
+      ]
+    }
+  },
+  "dependencies": {
+    "@xunlei-open/dlsdk": "^1.0.3",
+    "@xunlei-open/dlsdk-native-windows-x64": "^1.0.3"
+  }
+}

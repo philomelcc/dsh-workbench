@@ -1,0 +1,3 @@
+- insert:
+    - id: download-center
+      name: '@philomelcc/dsh-download-center'

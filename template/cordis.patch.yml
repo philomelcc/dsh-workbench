@@ -1,0 +1,3 @@
+- insert:
+    - id: my-module
+      name: '@your-scope/dsh-my-module'

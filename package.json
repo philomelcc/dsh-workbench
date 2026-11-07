@@ -1,0 +1,23 @@
+{
+  "name": "dsh-workbench",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Workbench shell and official modules for DeepSeek Harness",
+  "license": "MIT",
+  "author": "philomelcc",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/philomelcc/dsh-workbench.git"
+  },
+  "homepage": "https://github.com/philomelcc/dsh-workbench#readme",
+  "bugs": {
+    "url": "https://github.com/philomelcc/dsh-workbench/issues"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "check": "node scripts/check.mjs",
+    "publish:all": "pnpm -r publish --access public"
+  }
+}

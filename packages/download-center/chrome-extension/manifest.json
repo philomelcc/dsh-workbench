@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "DSH 下载接管",
+  "version": "1.0.0",
+  "description": "把 Chrome 的默认下载转发到 DSH 工作台下载中心（支持迅雷 / aria2 后端）",
+  "permissions": ["downloads", "storage"],
+  "host_permissions": ["http://127.0.0.1:3080/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "DSH 下载接管",
+    "default_popup": "popup.html"
+  }
+}

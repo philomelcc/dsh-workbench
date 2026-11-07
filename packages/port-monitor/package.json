@@ -1,0 +1,39 @@
+{
+  "name": "@philomelcc/dsh-port-monitor",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Reference workbench module: lists listening ports, owning processes and reachability, with one-click jump to HTTP services.",
+  "license": "MIT",
+  "author": "philomelcc",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/philomelcc/dsh-workbench.git",
+    "directory": "packages/port-monitor"
+  },
+  "homepage": "https://github.com/philomelcc/dsh-workbench#readme",
+  "bugs": {
+    "url": "https://github.com/philomelcc/dsh-workbench/issues"
+  },
+  "keywords": ["dsh", "deepseek-harness", "workbench", "port-monitor", "example"],
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": ["index.js", "client.js", "cordis.patch.yml", "locale/*.json", "icon.svg"],
+  "publishConfig": {
+    "access": "public"
+  },
+  "dsh": {
+    "bundle": { "patch": "./cordis.patch.yml" },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-client-ui-sidebar"
+      ]
+    }
+  }
+}

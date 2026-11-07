@@ -1,0 +1,77 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .: {}
+
+  packages/download-center:
+    dependencies:
+      '@xunlei-open/dlsdk':
+        specifier: ^1.0.3
+        version: 1.0.3
+      '@xunlei-open/dlsdk-native-windows-x64':
+        specifier: ^1.0.3
+        version: 1.0.3
+
+  packages/port-monitor: {}
+
+  packages/status-monitor: {}
+
+  packages/workbench: {}
+
+packages:
+
+  '@xunlei-open/dlsdk-native-linux-x64@1.0.3':
+    resolution: {integrity: sha512-2KyZBRnLSKgfnzuODHFbzOOcJyG1KC+lOufR/Ck7XiRnThpSuly5y0lQvUoaHC7qtgan1e04sC80CVlhdxEuXQ==}
+    cpu: [x64]
+    os: [linux]
+
+  '@xunlei-open/dlsdk-native-macos-universal@1.0.3':
+    resolution: {integrity: sha512-pHWXImE3QX6GEI88+MuksjAIXK3TigdZpRGZQFTBAqq36UArYZMfhSdeLOI0NGy9JIqFqsFq4+zStUEDVPDYgA==}
+    cpu: [x64, arm64]
+    os: [darwin]
+
+  '@xunlei-open/dlsdk-native-windows-x64@1.0.3':
+    resolution: {integrity: sha512-F4HIDN8i83hkxvlJZCPn9A9v9e22FFxo2ruFugKjdWGGsHJqqHwo9PO8Vt5nAiTGZAq/qAE7WyfZNRkSmrfxnQ==}
+    cpu: [x64]
+    os: [win32]
+
+  '@xunlei-open/dlsdk-native-windows-x86@1.0.3':
+    resolution: {integrity: sha512-W76AQejg7nGa2joCJg1JpYLMztunHmH1enT967GBVIAsYgs3pis1vKCFEn1AIDRWPaQ8qVIbxv4R9JcBRROLWw==}
+    cpu: [ia32]
+    os: [win32]
+
+  '@xunlei-open/dlsdk@1.0.3':
+    resolution: {integrity: sha512-r0CbPnt38IuMIFeAwuhQRm2y6+9g2SP4+JhvZSz+JNRDKhzJ7pz2WxxBu7rF4LPo7JD4oQurQWebAw+EuSMdVQ==}
+    engines: {node: '>=18'}
+
+  koffi@2.16.3:
+    resolution: {integrity: sha512-E9y1AsgYGlaxMhcZzHr8y96QF2U5XzA12GGVAfbWqIubTwPNMXQarfBzePNXHe0xtIEtNd6ifAv3GAKYGUeBAQ==}
+
+snapshots:
+
+  '@xunlei-open/dlsdk-native-linux-x64@1.0.3':
+    optional: true
+
+  '@xunlei-open/dlsdk-native-macos-universal@1.0.3':
+    optional: true
+
+  '@xunlei-open/dlsdk-native-windows-x64@1.0.3': {}
+
+  '@xunlei-open/dlsdk-native-windows-x86@1.0.3':
+    optional: true
+
+  '@xunlei-open/dlsdk@1.0.3':
+    dependencies:
+      koffi: 2.16.3
+    optionalDependencies:
+      '@xunlei-open/dlsdk-native-linux-x64': 1.0.3
+      '@xunlei-open/dlsdk-native-macos-universal': 1.0.3
+      '@xunlei-open/dlsdk-native-windows-x64': 1.0.3
+      '@xunlei-open/dlsdk-native-windows-x86': 1.0.3
+
+  koffi@2.16.3: {}
