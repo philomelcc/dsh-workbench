@@ -18,7 +18,7 @@ profile that runs your Web UI — `web` in the common case:
 ```powershell
 dsh plugin --profile web add @philomelcc/dsh-workbench
 dsh plugin --profile web add @philomelcc/dsh-status-monitor
-dsh plugin --profile web add @philomelcc/dsh-download-center
+dsh plugin --profile web add @philomelcc/dsh-downloads
 ```
 
 `dsh plugin add` forwards to pnpm inside the profile and registers the new bundle

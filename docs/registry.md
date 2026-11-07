@@ -6,7 +6,7 @@ yours — one row, no ranking.
 | module | package | view id | what it shows |
 |---|---|---|---|
 | Status monitor | `@philomelcc/dsh-status-monitor` | `status` | disk, CPU/memory/GPU, ports, session usage — four cards with full-page zoom |
-| Download center | `@philomelcc/dsh-download-center` | `downloads` | download tasks (aria2 / Xunlei), magnet links, Chrome default-download takeover, history |
+| Download center | `@philomelcc/dsh-downloads` | `downloads` | download tasks (aria2 / Xunlei), magnet links, Chrome default-download takeover, history |
 | Port monitor | `@philomelcc/dsh-port-monitor` | `port-monitor` | listening ports, owning processes, reachability, jump to HTTP services |
 
 Rules for listing a module:

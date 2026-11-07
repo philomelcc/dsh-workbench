@@ -1,8 +1,8 @@
 {
-  "name": "@philomelcc/dsh-download-center",
-  "version": "0.1.0",
+  "name": "@philomelcc/dsh-downloads",
+  "version": "0.1.1",
   "type": "module",
-  "description": "Download center for the DSH workbench: task list, magnet links, Chrome default-download takeover and per-session download history.",
+  "description": "Download manager for the DSH workbench: task queue with progress, pause and resume, and a per-session history.",
   "license": "MIT",
   "author": "philomelcc",
   "repository": {
@@ -14,7 +14,7 @@
   "bugs": {
     "url": "https://github.com/philomelcc/dsh-workbench/issues"
   },
-  "keywords": ["dsh", "deepseek-harness", "workbench", "download", "aria2", "magnet"],
+  "keywords": ["dsh", "deepseek-harness", "workbench", "download-manager"],
   "exports": {
     ".": "./index.js",
     "./client": "./client.js",

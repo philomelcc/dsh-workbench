@@ -8,7 +8,7 @@
  * The workspace pins the public registry in each package's `publishConfig`, so a
  * local mirror in ~/.npmrc cannot silently swallow a publish.
  */
-import { execFileSync } from "node:child_process";
+import { execSync } from "node:child_process";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -52,12 +52,13 @@ for (const { manifest } of rows) {
 // verify the npm session against the registry the packages actually use
 let whoami = "";
 try {
-  whoami = execFileSync("npm", ["whoami", `--registry=${EXPECTED_REGISTRY}`], {
+  whoami = execSync(`npm whoami --registry=${EXPECTED_REGISTRY}`, {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
   }).trim();
-} catch {
-  problems.push("npm is not logged in for registry.npmjs.org (run `npm login`)");
+} catch (error) {
+  const detail = String(error.stderr || error.message || "").trim().split("\n")[0];
+  problems.push(`npm is not logged in for registry.npmjs.org (run \`npm login\`)${detail ? ` — ${detail}` : ""}`);
 }
 
 if (problems.length > 0) {
@@ -74,7 +75,7 @@ if (!publish) {
   process.exit(0);
 }
 
-execFileSync("pnpm", ["-r", "publish", "--access", "public", "--no-git-checks"], {
+execSync("pnpm -r publish --access public --no-git-checks", {
   cwd: ROOT,
   stdio: "inherit",
 });

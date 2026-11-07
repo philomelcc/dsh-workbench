@@ -1,4 +1,4 @@
-# @philomelcc/dsh-download-center
+# @philomelcc/dsh-downloads
 
 Workbench module: a real download queue — progress, pause/resume/cancel, magnet
 links, Chrome default-download takeover, and a per-session record of what was
@@ -8,7 +8,7 @@ downloaded.
 
 ```powershell
 dsh plugin --profile web add @philomelcc/dsh-workbench
-dsh plugin --profile web add @philomelcc/dsh-download-center
+dsh plugin --profile web add @philomelcc/dsh-downloads
 ```
 
 Restart the Web UI; the module adds the **下载 / Downloads** tab.

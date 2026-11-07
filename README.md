@@ -18,7 +18,7 @@ The shell is deliberately thin — it owns layout, the tab row and a handful of 
 |---|---|
 | [`@philomelcc/dsh-workbench`](packages/workbench) | the shell: module API, top bar, tab switcher, overview page, shared components |
 | [`@philomelcc/dsh-status-monitor`](packages/status-monitor) | disk / hardware / ports / usage cards with a full-page zoom |
-| [`@philomelcc/dsh-download-center`](packages/download-center) | download tasks with aria2 + Xunlei backends, magnet links, session history |
+| [`@philomelcc/dsh-downloads`](packages/download-center) | download tasks with aria2 + Xunlei backends, magnet links, session history |
 | [`@philomelcc/dsh-port-monitor`](packages/port-monitor) | reference module: listening ports, processes, one-click open |
 
 ## Install
@@ -26,7 +26,7 @@ The shell is deliberately thin — it owns layout, the tab row and a handful of 
 ```powershell
 dsh plugin --profile web add @philomelcc/dsh-workbench
 dsh plugin --profile web add @philomelcc/dsh-status-monitor
-dsh plugin --profile web add @philomelcc/dsh-download-center
+dsh plugin --profile web add @philomelcc/dsh-downloads
 ```
 
 Restart the Web UI once. The workbench tabs appear on the second top-bar row. Details, manual install and troubleshooting are in [docs/getting-started.md](docs/getting-started.md).

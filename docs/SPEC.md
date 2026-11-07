@@ -122,9 +122,9 @@ Use tokens instead of hard-coded colors so both themes keep working.
 
 | thing | convention | example |
 |---|---|---|
-| package | `@<scope>/dsh-<module>` | `@philomelcc/dsh-download-center` |
+| package | `@<scope>/dsh-<module>` | `@philomelcc/dsh-downloads` |
 | module id / view id | short kebab-case | `downloads` |
-| client entry id | **the package name** | `@philomelcc/dsh-download-center` |
+| client entry id | **the package name** | `@philomelcc/dsh-downloads` |
 | HTTP routes | `/wb/<module-id>/<verb>` | `/wb/downloads/list` |
 | plugin title | `Workbench · <Name>` | `Workbench · Download center` |
 
