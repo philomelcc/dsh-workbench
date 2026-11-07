@@ -456,6 +456,10 @@ window.__ModuleLoader__.load({
       '--dsw-alias-state-success-primary': '#4f7a5a',
       '--dsw-alias-state-idle-primary': '#a49a89',
       '--dsw-specific-sidebar-fill': '#efe9db',
+      // Chat bubbles: the light base uses a pale DeepSeek blue, which looks
+      // wrong on paper. These two are outside the alias layer.
+      '--dsw-specific-bubble': '#efe7d6',
+      '--dsw-specific-bubble-highlight': '#e4d8c0',
     };
 
     // Swatches double as both the current-state indicator and the toggle.
@@ -507,8 +511,46 @@ window.__ModuleLoader__.load({
       }
 
       function ThemeSwitcher() {
+        const boxRef = React.useRef(null);
         const [paper, setPaperState] = React.useState(readPaper);
         const [preference, setPreference] = React.useState(readPreference);
+
+        // The account block is fixed to the right and changes width (a reconnect
+        // banner widens it), so park the swatches against its measured left edge
+        // instead of a guessed margin.
+        React.useEffect(() => {
+          const box = boxRef.current;
+          if (!box) return undefined;
+          const place = () => {
+            const settings = document.querySelector('[class*="settingsArea"]');
+            if (!settings) {
+              box.style.right = '150px';
+              return;
+            }
+            const rect = settings.getBoundingClientRect();
+            if (rect.width > 0) box.style.right = (rect.width + 16 + 12) + 'px';
+            // Same box as the account block, so `align-items: center` lands on
+            // the account's optical center instead of a guessed offset.
+            if (rect.height > 0) {
+              box.style.top = rect.top + 'px';
+              box.style.height = rect.height + 'px';
+            }
+          };
+          place();
+          let observer = null;
+          const settings = document.querySelector('[class*="settingsArea"]');
+          if (settings && typeof ResizeObserver !== 'undefined') {
+            observer = new ResizeObserver(place);
+            // border-box: the account's width changes through its chrome, not
+            // just its text content.
+            observer.observe(settings, { box: 'border-box' });
+          }
+          window.addEventListener('resize', place);
+          return () => {
+            if (observer) observer.disconnect();
+            window.removeEventListener('resize', place);
+          };
+        }, []);
 
         // Re-apply the saved paper layer after a reload / remount.
         React.useEffect(() => {
@@ -555,7 +597,11 @@ window.__ModuleLoader__.load({
         };
 
         return h('div', {
-          style: { display: 'inline-flex', alignItems: 'center', gap: 8, flex: '0 0 auto' },
+          ref: boxRef,
+          style: {
+            position: 'fixed', top: 2, height: 40, zIndex: 301,
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+          },
           title: '主题',
         },
           THEME_SWATCHES.map((swatch) => {
@@ -593,7 +639,9 @@ window.__ModuleLoader__.load({
         const tone = snap.phase === 'ready' ? balanceTone(snap.amount) : 'muted';
         const value = snap.phase === 'ready' && typeof snap.amount === 'number' ? snap.amount.toFixed(2) : (snap.phase === 'loading' ? '…' : '—');
         const toneColor = tone === 'green' ? '#4ade80' : tone === 'amber' ? '#e3b341' : tone === 'red' ? '#f87171' : 'var(--dsw-alias-label-secondary)';
-        const borderBase = tone === 'green' ? '#2f4a37' : tone === 'amber' ? '#4a3d22' : tone === 'red' ? '#4a2a2a' : 'var(--dsw-alias-border-l2)';
+        // The border follows the theme: hard-coded dark greens read as a black
+        // ring on light/paper backgrounds.
+        const borderBase = 'var(--dsw-alias-border-l2)';
         const at = new Date(snap.updatedAt || Date.now()).toLocaleTimeString('zh-CN', { hour12: false });
         return h('div', {
           style: { position: 'relative', display: 'inline-flex' },
@@ -789,7 +837,7 @@ window.__ModuleLoader__.load({
               iconBtn('plugins', '插件', IconPlugins),
               iconBtn('schedules', '自动化任务', IconClock),
             ),
-            h('div', { style: { flex: '0 0 auto', marginRight: 150 } }, h(ThemeSwitcher)),
+            h(ThemeSwitcher),
           ),
           h('div', { style: { height: 45, display: 'flex', alignItems: 'center', gap: 8, padding: '0 14px', borderTop: '1px solid var(--dsw-alias-border-l1)' } },
             h('div', { ref: tabsRef, style: { position: 'relative', display: 'flex', alignItems: 'center', gap: 4, flex: 1, overflowX: 'auto', overflowY: 'hidden' } },
