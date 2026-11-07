@@ -1116,8 +1116,17 @@ div[data-row-key^="session:"]:has(svg[data-state="ongoing"]) svg[data-state="ong
         var r = radiusOf(width, height);
         var total = perimeter(width, height);
         var t = (now % ORBIT_MS) / ORBIT_MS;
+        // 呼吸边框：2.8s 一个周期，和原来 CSS 动画同节奏；在 canvas 内画，
+        // 所以只会有一条边（不会再和 CSS box-shadow 叠成双线）。
+        var breath = 0.5 + 0.5 * Math.sin((now / 2800) * Math.PI * 2);
+        var dim = entry.lights === 1 ? 0.35 : 1;
+        var edgeAlpha = (0.12 + breath * 0.33) * dim;
 
-        context.strokeStyle = "rgba(99, 149, 255, 0.07)";
+        context.save();
+        context.lineWidth = 1;
+        context.strokeStyle = "rgba(99, 149, 255, " + edgeAlpha.toFixed(3) + ")";
+        context.shadowBlur = (4 + breath * 10) * dim;
+        context.shadowColor = "rgba(99, 149, 255, " + ((0.2 + breath * 0.35) * dim).toFixed(3) + ")";
         context.beginPath();
         if (typeof context.roundRect === "function") {
           context.roundRect(0.5, 0.5, width - 1, height - 1, r);
@@ -1125,6 +1134,7 @@ div[data-row-key^="session:"]:has(svg[data-state="ongoing"]) svg[data-state="ong
           context.rect(0.5, 0.5, width - 1, height - 1);
         }
         context.stroke();
+        context.restore();
 
         var count = Math.max(24, Math.ceil(total / STEP_PX));
         for (var i = 0; i < count; i += 1) {
