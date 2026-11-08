@@ -560,12 +560,15 @@ window.__ModuleLoader__.load({
               return;
             }
             const rect = settings.getBoundingClientRect();
-            if (rect.width > 0) box.style.right = (rect.width + 16 + 12) + 'px';
-            // Same box as the account block, so `align-items: center` lands on
-            // the account's optical center instead of a guessed offset.
-            if (rect.height > 0) {
+            if (rect.width > 0) {
+              box.style.right = (rect.width + 16 + 12) + 'px';
               box.style.top = rect.top + 'px';
               box.style.height = rect.height + 'px';
+            } else {
+              // Narrow screens hide the account block; pin the swatches right.
+              box.style.right = '12px';
+              box.style.top = '2px';
+              box.style.height = '40px';
             }
           };
           place();
@@ -782,12 +785,32 @@ window.__ModuleLoader__.load({
           if (wsRoot) {
             Array.from(wsRoot.children).forEach((g, i) => { if (i > 0) g.style.display = 'none'; });
           }
+          // Narrow screens keep the official sidebar toggle: the workbench has no
+          // session list of its own, so hiding it strands phone users.
+          const narrowScreen = typeof window !== 'undefined' && window.innerWidth < 768;
           document.querySelectorAll('button[aria-label]').forEach((b) => {
             const label = b.getAttribute('aria-label') || '';
-            if (label.includes('侧栏') || label.includes('侧边栏') || label.includes('折叠') || label.includes('collapse') || label.includes('toggle')) {
+            if (!narrowScreen && (label.includes('侧栏') || label.includes('侧边栏') || label.includes('折叠') || label.includes('collapse') || label.includes('toggle'))) {
               b.style.display = 'none';
             }
           });
+          if (narrowScreen) {
+            // The official toggle lives inside the translated sidebar container,
+            // so a fixed copy would ride along with it. Own button in <body>,
+            // clicks delegated to the official one.
+            const original = Array.from(document.querySelectorAll('button[aria-label]'))
+              .find((b) => b.getAttribute('aria-label') === '打开侧边栏');
+            if (original) {
+              const toggle = document.createElement('button');
+              toggle.type = 'button';
+              toggle.className = 'wb-mobile-sidebar-toggle';
+              toggle.setAttribute('aria-label', '显示会话列表');
+              toggle.textContent = '☰';
+              toggle.addEventListener('click', () => original.click());
+              document.body.appendChild(toggle);
+              cleanup.push(() => toggle.remove());
+            }
+          }
           const settings = document.querySelector('[class*="settingsArea"]');
           if (settings) {
             settings.style.position = 'fixed';
@@ -863,8 +886,8 @@ window.__ModuleLoader__.load({
 
         return h('div', { ref: rootRef, style: { position: 'fixed', top: 0, left: 0, right: 0, height: TOPBAR_HEIGHT, zIndex: 100, pointerEvents: 'auto', display: 'flex', flexDirection: 'column', background: 'var(--dsw-alias-bg-base)', borderBottom: '1px solid var(--dsw-alias-border-l1)' } },
           h('div', { style: { height: 56, display: 'flex', alignItems: 'center', gap: 10, padding: '0 14px' } },
-            h('div', { style: { width: 214, flex: '0 0 auto' } }),
-            h('div', { style: { display: 'flex', gap: 2, flex: 1, overflow: 'hidden' } },
+            h('div', { className: 'wb-topbar-brand', style: { width: 214, flex: '0 0 auto' } }),
+            h('div', { className: 'wb-topbar-icons', style: { display: 'flex', gap: 2, flex: 1, overflow: 'hidden' } },
               iconBtn('workbench', '工作台', IconGrid),
               iconBtn('plugins', '插件', IconPlugins),
               iconBtn('schedules', '自动化任务', IconClock),
@@ -1189,6 +1212,9 @@ window.__ModuleLoader__.load({
   z-index: 1;
   filter: drop-shadow(0 0 2px rgba(170, 200, 255, 0.65));
 }
+body[data-wb-paper="1"] .dsh-glow-canvas {
+  filter: drop-shadow(0 0 2px rgba(198, 156, 96, 0.6));
+}
 /* 隐藏运行中会话左侧的转圈：不依赖 JS 加的 class，React 重建行时也能兜底 */
 div[data-row-key^="session:"]:has(svg[data-state="ongoing"]) svg[data-state="ongoing"],
 .dsh-glow-on svg[data-state="ongoing"],
@@ -1383,12 +1409,18 @@ body[data-wb-paper="1"] [class*="_hoverPath"] {
         var breath = 0.5 + 0.5 * Math.sin((now / 2800) * Math.PI * 2);
         var dim = entry.lights === 1 ? 0.35 : 1;
         var edgeAlpha = (0.12 + breath * 0.33) * dim;
+        // Paper turns the blue streak into a bronze one; blue reads as ink
+        // smear on a warm sheet.
+        var paperNow = false;
+        try { paperNow = document.body.hasAttribute("data-wb-paper"); } catch (_error) { paperNow = false; }
+        var glowBase = paperNow ? [138, 106, 69] : [99, 149, 255];
+        var glowHot = paperNow ? [198, 156, 96] : [205, 180, 255];
 
         context.save();
         context.lineWidth = 1;
-        context.strokeStyle = "rgba(99, 149, 255, " + edgeAlpha.toFixed(3) + ")";
+        context.strokeStyle = "rgba(" + glowBase[0] + ", " + glowBase[1] + ", " + glowBase[2] + ", " + edgeAlpha.toFixed(3) + ")";
         context.shadowBlur = (4 + breath * 10) * dim;
-        context.shadowColor = "rgba(99, 149, 255, " + ((0.2 + breath * 0.35) * dim).toFixed(3) + ")";
+        context.shadowColor = "rgba(" + glowBase[0] + ", " + glowBase[1] + ", " + glowBase[2] + ", " + ((0.2 + breath * 0.35) * dim).toFixed(3) + ")";
         context.beginPath();
         if (typeof context.roundRect === "function") {
           context.roundRect(0.5, 0.5, width - 1, height - 1, r);
@@ -1405,9 +1437,9 @@ body[data-wb-paper="1"] [class*="_hoverPath"] {
           if (weight < 0.02) continue;
           var p0 = pointOnRect(width, height, phase);
           var p1 = pointOnRect(width, height, (i + 1) / count);
-          var rChannel = Math.round(99 + (205 - 99) * weight);
-          var gChannel = Math.round(149 + (180 - 149) * weight);
-          var bChannel = 255;
+          var rChannel = Math.round(glowBase[0] + (glowHot[0] - glowBase[0]) * weight);
+          var gChannel = Math.round(glowBase[1] + (glowHot[1] - glowBase[1]) * weight);
+          var bChannel = Math.round(glowBase[2] + (glowHot[2] - glowBase[2]) * weight);
           // lights === 1 表示「只有后台任务」，整体压暗。
           var alpha = (0.05 + 0.95 * weight) * (entry.lights === 1 ? 0.35 : 1);
           context.strokeStyle =
@@ -1480,7 +1512,9 @@ body[data-wb-paper="1"] [class*="_hoverPath"] {
               + '\n.wb-session-row { display: flex; align-items: center; gap: 6px; width: 100%; padding: 5px 8px; border: none; border-radius: 6px; background: transparent; color: var(--dsw-alias-label-primary); cursor: pointer; text-align: left; font-size: 12px; }'
               + '\n.wb-session-row:hover { background: var(--dsw-alias-bg-layer-2); }'
               + '\n.wb-session-row .wb-session-more { opacity: 0; transition: opacity .12s; }'
-              + '\n.wb-balance-tip { position: absolute; top: calc(100% + 6px); right: 0; z-index: 500; padding: 8px 10px; border-radius: 8px; background: #23262c; border: 1px solid #2f333b; color: var(--dsw-alias-label-primary); font-size: 11px; line-height: 1.7; white-space: nowrap; max-width: 240px; box-sizing: border-box; box-shadow: 0 6px 20px rgba(0,0,0,.28); pointer-events: none; }'
+              + '\n.wb-balance-tip { position: absolute; top: calc(100% + 6px); right: 0; z-index: 500; padding: 8px 10px; border-radius: 8px; background: var(--dsw-alias-bg-overlay, #23262c); border: 1px solid var(--dsw-alias-border-l2, #2f333b); color: var(--dsw-alias-label-primary); font-size: 11px; line-height: 1.7; white-space: nowrap; max-width: 240px; box-sizing: border-box; box-shadow: 0 6px 20px rgba(0,0,0,.28); pointer-events: none; }'
+              + '\n.wb-mobile-sidebar-toggle { position: fixed; left: 10px; top: 10px; z-index: 5000; width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--dsw-alias-border-l2); background: var(--dsw-alias-bg-layer-1); color: var(--dsw-alias-label-primary); font-size: 15px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; box-shadow: 0 1px 4px rgba(0,0,0,.12); }'
+              + '\n@media (max-width: 767px) { .wb-topbar-brand, [class*="settingsArea"] { display: none !important; } .wb-topbar-icons { margin-left: 42px; } [class*="sidebarCol"] [class*="brand"] { display: none !important; } [class*="sidebarCol"] { padding-top: 44px !important; } [aria-label="收起侧边栏"] { display: none !important; } }'
               + '\n.wb-balance:hover { border-color: #4ade80 !important; background: rgba(74,222,128,.12) !important; }'
               + '\n.wb-nav-item { position: relative; }'
               + '\n.wb-nav-label { max-width: 0; opacity: 0; overflow: hidden; white-space: nowrap; font-size: 12px; transition: max-width .18s ease, opacity .18s ease; }'
