@@ -156,8 +156,10 @@ The full checklist — monorepo releases vs. a standalone repository, versioning
 and the pre-publish dry run — is in
 [publishing.md](publishing.md#publishing-a-module-yours-or-a-new-official-one).
 
-## Reference modules
+## Example and reference modules
 
-`packages/port-monitor` is the smallest complete module and the recommended
-starting point. `packages/status-monitor` and `packages/download-center` show
-heavier pages (charts, task lists, subprocess engines).
+`packages/port-monitor` is the smallest complete module, but it is `private` and
+not published: it exists so the docs can point at a working package instead of
+only a skeleton. Start a real module from `template/`.
+`packages/status-monitor` and `packages/download-center` are the published
+modules and show heavier pages (charts, task lists, subprocess engines).

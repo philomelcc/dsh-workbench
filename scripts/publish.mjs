@@ -27,7 +27,11 @@ function packages() {
     });
 }
 
-const rows = packages();
+const all = packages();
+// Examples are private on purpose: they stay in the repo as a reference but are
+// not released.
+const rows = all.filter(({ manifest }) => manifest.private !== true);
+const examples = all.filter(({ manifest }) => manifest.private === true);
 const problems = [];
 
 for (const { dir, manifest } of rows) {
@@ -38,15 +42,16 @@ for (const { dir, manifest } of rows) {
   if (config.access !== "public") {
     problems.push(`${manifest.name}: publishConfig.access must be "public" (scoped packages default to private)`);
   }
-  if (manifest.private === true) {
-    problems.push(`${manifest.name}: still marked private`);
-  }
   if (!manifest.version) problems.push(`${manifest.name}: missing version`);
 }
 
 console.log(`packages (${rows.length}):`);
 for (const { manifest } of rows) {
   console.log(`  ${manifest.name}@${manifest.version}`);
+}
+if (examples.length > 0) {
+  console.log(`examples (${examples.length}, not published):`);
+  for (const { manifest } of examples) console.log(`  ${manifest.name}`);
 }
 
 // verify the npm session against the registry the packages actually use

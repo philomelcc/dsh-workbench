@@ -21,7 +21,8 @@ The shell is deliberately thin — it owns layout, the tab row and a handful of 
 | [`@philomelcc/dsh-workbench`](packages/workbench) | the shell: module API, top bar, tab switcher, overview page, shared components |
 | [`@philomelcc/dsh-status-monitor`](packages/status-monitor) | disk / hardware / ports / usage cards with a full-page zoom |
 | [`@philomelcc/dsh-downloads`](packages/download-center) | download queue with aria2 + Xunlei backends, magnet links, session history |
-| [`@philomelcc/dsh-port-monitor`](packages/port-monitor) | reference module: listening ports, processes, one-click open |
+
+[`packages/port-monitor`](packages/port-monitor) is an in-repo example (`private`, not published to npm): it shows what a complete minimal module package looks like. To start a module, copy [`template/`](template).
 
 ## Install
 
@@ -51,7 +52,7 @@ ctx.effect(() => wb.registerView({
 }), 'my-module: view');
 ```
 
-Copy [`template/`](template) to start, or read [`packages/port-monitor`](packages/port-monitor) as a complete example. Shell and modules version independently: a module built for `apiVersion 1` keeps working across shell releases that still report `1`.
+Copy [`template/`](template) to start, or read [`packages/port-monitor`](packages/port-monitor) as a complete example (it is private and not published to npm). Shell and modules version independently: a module built for `apiVersion 1` keeps working across shell releases that still report `1`.
 
 ## Repository layout
 
@@ -59,7 +60,7 @@ Copy [`template/`](template) to start, or read [`packages/port-monitor`](package
 packages/workbench         the shell bundle
 packages/status-monitor    official module
 packages/download-center   official module
-packages/port-monitor      reference module
+packages/port-monitor      example module (private, not published)
 template/                  copy-me starting point for a new module
 docs/                      SPEC, getting started, module registry, publishing
 scripts/check.mjs          node --check across every shipped script

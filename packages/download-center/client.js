@@ -632,9 +632,25 @@ window.__ModuleLoader__.load({
     // 外壳通过闭包提供 workbench 服务；视图组件的 props 里没有 wb。
     let wbRef = null;
 
+    // Standalone palette (no workbench): plain alias variables, theme-aware.
+    const STANDALONE_TOKENS = {
+      success: "var(--dsw-alias-state-success-primary)",
+      error: "var(--dsw-alias-state-error-primary)",
+      warn: "var(--dsw-alias-state-warn-primary)",
+      idle: "var(--dsw-alias-state-idle-primary)",
+      brand: "var(--dsw-alias-brand-primary)",
+      bgBase: "var(--dsw-alias-bg-base)",
+      bgLayer1: "var(--dsw-alias-bg-layer-1)",
+      bgLayer2: "var(--dsw-alias-bg-layer-2)",
+      bgOverlay: "var(--dsw-alias-bg-overlay)",
+      border1: "var(--dsw-alias-border-l1)",
+      border2: "var(--dsw-alias-border-l2)",
+      label: "var(--dsw-alias-label-primary)",
+      labelSecondary: "var(--dsw-alias-label-secondary)",
+    };
+
     function DownloadsView() {
-      const wb = wbRef;
-      const tokens = wb.tokens;
+      const tokens = (wbRef && wbRef.tokens) || STANDALONE_TOKENS;
       const [tasks, setTasks] = useState([]);
       const [stats, setStats] = useState({ total: 0, running: 0, done: 0, speedBytesPerSec: 0 });
       const [filter, setFilter] = useState("all");
@@ -873,22 +889,16 @@ window.__ModuleLoader__.load({
     }
 
     return {
-      inject: ["slots", "workbench"],
+      inject: ["slots"],
       apply(ctx) {
-        const wb = ctx.get("workbench");
-        if (!wb) {
-          console.warn("[download-center] workbench service missing; view not registered");
-          return;
-        }
-        if (wb.apiVersion !== 1) {
-          console.warn("[download-center] needs workbench apiVersion 1, got " + wb.apiVersion + "; upgrade @philomelcc/dsh-workbench");
-          return;
-        }
-        wbRef = wb;
+        const api = ctx.get("workbench");
+        const usable = !!(api && api.apiVersion === 1);
+        if (usable) wbRef = api;
+        const tokens = usable ? api.tokens : STANDALONE_TOKENS;
         // 悬停/按压/切换过渡统一走 CSS，避免每个按钮写一遍内联状态
         const style = document.createElement("style");
         style.dataset.plugin = "dsh-download-center";
-        style.textContent = styleText(wb.tokens);
+        style.textContent = styleText(tokens);
         document.head.appendChild(style);
         ctx.effect(() => () => style.remove(), "download-center: styles");
         ctx.slots.inject("conversation.session.header.actions", () =>
@@ -897,18 +907,29 @@ window.__ModuleLoader__.load({
             DownloadStrip,
           ),
         );
-        ctx.effect(
-          () =>
-            wb.registerView({
-              id: "downloads",
-              title: "下载",
-              subtitle: "任务列表、磁力链接与会话下载记录",
-              icon: DownloadIcon,
-              component: DownloadsView,
-              order: 40,
-            }),
-          "download-center: view",
-        );
+        if (usable) {
+          ctx.effect(
+            () =>
+              api.registerView({
+                id: "downloads",
+                title: "下载",
+                subtitle: "任务列表、磁力链接与会话下载记录",
+                icon: DownloadIcon,
+                component: DownloadsView,
+                order: 40,
+              }),
+            "download-center: view",
+          );
+        } else {
+          // No workbench: publish the same pair the built-in panels use — a
+          // sidebar entry plus the page it opens.
+          ctx.effect(() => ctx.slots.inject("sidebar.panellist", () => ctx.slots.register({
+            name: "sidebar.panellist", id: "downloads", order: 40, label: "下载",
+          }, DownloadIcon)), "download-center: sidebar entry");
+          ctx.effect(() => ctx.slots.inject("main", () => ctx.slots.register(
+            { name: "main", key: "downloads" }, DownloadsView,
+          )), "download-center: main view");
+        }
       },
     };
   },

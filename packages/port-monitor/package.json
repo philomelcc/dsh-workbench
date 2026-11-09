@@ -1,8 +1,9 @@
 {
   "name": "@philomelcc/dsh-port-monitor",
+  "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Reference workbench module: lists listening ports, owning processes and reachability, with one-click jump to HTTP services.",
+  "description": "Workbench module example: lists listening ports, owning processes and reachability, with one-click jump to HTTP services.",
   "license": "MIT",
   "author": "philomelcc",
   "repository": {

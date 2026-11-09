@@ -665,8 +665,74 @@ window.__ModuleLoader__.load({
       return ThemeSwitcher;
     }
 
+    // ---------- native sidebar panel mirror ----------
+    // The workbench keeps no navigation list of its own: whatever the sidebar
+    // lists (Plugins, Automations, More — plus any plugin that registers a
+    // panel later) is mirrored into the top bar, click delegated to that row.
+    function createPanelMirror() {
+      function PanelMirror() {
+        const [items, setItems] = React.useState(function () { return []; });
+
+        React.useEffect(function () {
+          function sync() {
+            const list = document.querySelector('nav[class*="panelList"]');
+            if (!list) return;
+            const next = [];
+            Array.prototype.forEach.call(list.children, function (node) {
+              const btn = node.tagName === 'BUTTON'
+                ? node
+                : (node.querySelector ? node.querySelector('button') : null);
+              if (!btn) return;
+              const label = btn.getAttribute('aria-label') || String(node.textContent || '').trim();
+              const svg = btn.querySelector('svg');
+              next.push({ label: label || '入口', html: svg ? svg.outerHTML : '', btn: btn });
+            });
+            setItems(function (prev) {
+              const same = prev.length === next.length && prev.every(function (item, index) {
+                return item.label === next[index].label && item.html === next[index].html;
+              });
+              return same ? prev : next;
+            });
+          }
+          sync();
+          const observer = new MutationObserver(sync);
+          observer.observe(document.body, { childList: true, subtree: true });
+          return function () { observer.disconnect(); };
+        }, []);
+
+        return h('div', { className: 'wb-topbar-icons', style: { display: 'flex', gap: 2, flex: 1, overflow: 'hidden' } },
+          items.map(function (item, index) {
+            return h('button', {
+              key: item.label + ':' + index,
+              type: 'button',
+              className: 'wb-nav-item',
+              'aria-label': item.label,
+              onClick: function () {
+                try { item.btn.click(); } catch (_error) { /* row went away */ }
+              },
+              style: {
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                gap: 4, height: 34, padding: '0 9px', borderRadius: 8, border: 'none',
+                background: 'transparent', color: 'var(--dsw-alias-label-secondary)',
+                cursor: 'pointer', flex: '0 0 auto', transition: 'background .15s, color .15s',
+              },
+            },
+              h('span', {
+                'aria-hidden': true,
+                style: { display: 'inline-flex', width: 18, height: 18, flex: '0 0 auto' },
+                dangerouslySetInnerHTML: { __html: item.html },
+              }),
+              h('span', { className: 'wb-nav-label' }, item.label),
+            );
+          }),
+        );
+      }
+      return PanelMirror;
+    }
+
     function createTopBar(ctx, balance) {
       const ThemeSwitcher = createThemeSwitcher(ctx);
+      const PanelMirror = createPanelMirror();
 
       function BalanceChip() {
         const snap = React.useSyncExternalStore(balance.subscribe, balance.getSnapshot);
@@ -887,11 +953,7 @@ window.__ModuleLoader__.load({
         return h('div', { ref: rootRef, style: { position: 'fixed', top: 0, left: 0, right: 0, height: TOPBAR_HEIGHT, zIndex: 100, pointerEvents: 'auto', display: 'flex', flexDirection: 'column', background: 'var(--dsw-alias-bg-base)', borderBottom: '1px solid var(--dsw-alias-border-l1)' } },
           h('div', { style: { height: 56, display: 'flex', alignItems: 'center', gap: 10, padding: '0 14px' } },
             h('div', { className: 'wb-topbar-brand', style: { width: 214, flex: '0 0 auto' } }),
-            h('div', { className: 'wb-topbar-icons', style: { display: 'flex', gap: 2, flex: 1, overflow: 'hidden' } },
-              iconBtn('workbench', '工作台', IconGrid),
-              iconBtn('plugins', '插件', IconPlugins),
-              iconBtn('schedules', '自动化任务', IconClock),
-            ),
+            h(PanelMirror),
             h(ThemeSwitcher),
           ),
           h('div', { style: { height: 45, display: 'flex', alignItems: 'center', gap: 8, padding: '0 14px', borderTop: '1px solid var(--dsw-alias-border-l1)' } },
@@ -1001,9 +1063,16 @@ window.__ModuleLoader__.load({
       return key.indexOf("v4-pro") >= 0 ? PRICING["deepseek-v4-pro"] : PRICING["deepseek-flash"];
     }
 
+    function timeMs(value) {
+      var n = typeof value === "number" ? value : Number(value);
+      if (!isFinite(n) || n <= 0) return undefined;
+      // Turn times can arrive in seconds; anything below 1e12 ms is seconds.
+      return n < 1e12 ? n * 1000 : n;
+    }
+
     function computeCost(usage, ts) {
       var model = modelOf(usage);
-      var peak = isPeak(ts);
+      var peak = isPeak(timeMs(ts));
       var table = peak ? pricesFor(model).peak : pricesFor(model).offPeak;
       var hit = num(usage && usage.cacheReadTokens);
       var miss = num(usage && usage.uncachedInputTokens) + num(usage && usage.cacheWriteTokens);
@@ -1063,7 +1132,7 @@ window.__ModuleLoader__.load({
               ? entry.data.get("turn-tail")
               : undefined;
           if (tail && tail.tokenUsage && matchesTail(tail, seq, turnId)) {
-            return tail.tokenUsage;
+            return tail;
           }
         }
       }
@@ -1072,7 +1141,7 @@ window.__ModuleLoader__.load({
         var found;
         snapshot.nodes.forEach(function (node) {
           if (!node || node.kind !== "turn-tail" || !node.data || !node.data.tokenUsage) return;
-          if (matchesTail(node.data, seq, turnId)) found = node.data.tokenUsage;
+          if (matchesTail(node.data, seq, turnId)) found = node.data;
         });
         if (found) return found;
       }
@@ -1127,7 +1196,9 @@ window.__ModuleLoader__.load({
           });
         }
         if (!usage) return null;
-        var entry = computeCost(usage, Date.now());
+        // Price by the turn's own timestamp, not by when this row happens to
+        // render: otherwise every historical turn reprices at the current hour.
+        var entry = computeCost(usage.tokenUsage, usage.time);
         return h(
           "div",
           {

@@ -127,6 +127,24 @@ window.__ModuleLoader__.load({
 
     let wb = null;
 
+    // Same palette the workbench exposes, but these are plain CSS variables so
+    // the page still themes correctly with no workbench installed.
+    const STANDALONE_TOKENS = {
+      success: 'var(--dsw-alias-state-success-primary)',
+      error: 'var(--dsw-alias-state-error-primary)',
+      warn: 'var(--dsw-alias-state-warn-primary)',
+      idle: 'var(--dsw-alias-state-idle-primary)',
+      brand: 'var(--dsw-alias-brand-primary)',
+      bgBase: 'var(--dsw-alias-bg-base)',
+      bgLayer1: 'var(--dsw-alias-bg-layer-1)',
+      bgLayer2: 'var(--dsw-alias-bg-layer-2)',
+      bgOverlay: 'var(--dsw-alias-bg-overlay)',
+      border1: 'var(--dsw-alias-border-l1)',
+      border2: 'var(--dsw-alias-border-l2)',
+      label: 'var(--dsw-alias-label-primary)',
+      labelSecondary: 'var(--dsw-alias-label-secondary)',
+    };
+
     // ---------- formatting ----------
     function fmtBytes(bytes, digits) {
       const n = Number(bytes);
@@ -2554,27 +2572,30 @@ window.__ModuleLoader__.load({
     }
 
     return {
-      inject: ['slots', 'workbench'],
+      inject: ['slots'],
       apply(ctx) {
         const api = ctx.get('workbench');
-        if (!api) {
-          console.warn('[status-monitor] workbench service missing; registration skipped');
+        if (api && api.apiVersion === 1) {
+          wb = api;
+          ctx.effect(() => api.registerView({
+            id: VIEW_ID,
+            title: '状态监控',
+            subtitle: '磁盘、硬件、端口与会话用量',
+            icon: StatusIcon,
+            component: StatusView,
+            order: 20,
+          }), 'status-monitor: view');
           return;
         }
-        if (api.apiVersion !== 1) {
-          console.warn('[status-monitor] needs workbench apiVersion 1, got ' + api.apiVersion + '; upgrade @philomelcc/dsh-workbench');
-          return;
-        }
-        wb = api;
-
-        ctx.effect(() => api.registerView({
-          id: VIEW_ID,
-          title: '状态监控',
-          subtitle: '磁盘、硬件、端口与会话用量',
-          icon: StatusIcon,
-          component: StatusView,
-          order: 20,
-        }), 'status-monitor: view');
+        // No workbench: publish the same pair the built-in panels use — a
+        // sidebar entry plus the page it opens.
+        wb = { tokens: STANDALONE_TOKENS };
+        ctx.effect(() => ctx.slots.inject('sidebar.panellist', () => ctx.slots.register({
+          name: 'sidebar.panellist', id: VIEW_ID, order: 20, label: '状态监控',
+        }, StatusIcon)), 'status-monitor: sidebar entry');
+        ctx.effect(() => ctx.slots.inject('main', () => ctx.slots.register(
+          { name: 'main', key: VIEW_ID }, StatusView,
+        )), 'status-monitor: main view');
       },
     };
   },

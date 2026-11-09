@@ -19,7 +19,8 @@ DeepSeek Harness 的 Web UI 以会话为中心。这个项目把它变成工作�
 | [`@philomelcc/dsh-workbench`](packages/workbench) | 外壳：模块 API、顶部栏、标签切换、总览页、公共组件 |
 | [`@philomelcc/dsh-status-monitor`](packages/status-monitor) | 磁盘 / 硬件 / 端口 / 用量四张卡片，支持放大到整页 |
 | [`@philomelcc/dsh-downloads`](packages/download-center) | 下载队列（aria2 + 迅雷双引擎）、磁力链接、会话下载记录 |
-| [`@philomelcc/dsh-port-monitor`](packages/port-monitor) | 参考模块：监听端口、所属进程、一键打开 |
+
+另外 [`packages/port-monitor`](packages/port-monitor) 是仓库内的示例模块（`private: true`，不发 npm）：它演示一个最小完整的模块包长什么样，想直接复制的话用 [`template/`](template)。
 
 ## 安装
 
@@ -49,7 +50,7 @@ ctx.effect(() => wb.registerView({
 }), 'my-module: view');
 ```
 
-从 [`template/`](template) 复制起步，或者直接读 [`packages/port-monitor`](packages/port-monitor) 这个最小完整例子。外壳和模块独立发版：按 `apiVersion 1` 写的模块，在仍然声明 `1` 的外壳上都能用。
+从 [`template/`](template) 复制起步，或者直接读 [`packages/port-monitor`](packages/port-monitor) 这个最小完整例子（它不发布到 npm，只在仓库里当参考）。外壳和模块独立发版：按 `apiVersion 1` 写的模块，在仍然声明 `1` 的外壳上都能用。
 
 ## 仓库结构
 
@@ -57,7 +58,7 @@ ctx.effect(() => wb.registerView({
 packages/workbench         外壳
 packages/status-monitor    官方模块
 packages/download-center   官方模块
-packages/port-monitor      参考模块
+packages/port-monitor      示例模块（私有，不发布）
 template/                  复制即用的模块起点
 docs/                      契约、快速开始、模块登记、发布流程
 scripts/check.mjs          对全部脚本跑 node --check

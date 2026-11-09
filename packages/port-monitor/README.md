@@ -1,6 +1,6 @@
 # @philomelcc/dsh-port-monitor
 
-参考模块——仓库里最小的完整例子。自己写模块时照它抄：一个 Host 路由、一个页面、一次 `registerView`。
+示例模块——仓库里最小的完整例子，`private: true`，**不发布到 npm**。自己写模块时照它抄：一个 Host 路由、一个页面、一次 `registerView`。
 
 ## 安装
 
