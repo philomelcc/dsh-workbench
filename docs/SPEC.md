@@ -185,5 +185,8 @@ and the pre-publish dry run — is in
 `packages/port-monitor` is the smallest complete module, but it is `private` and
 not published: it exists so the docs can point at a working package instead of
 only a skeleton. Start a real module from `template/`.
-`packages/status-monitor` and `packages/download-center` are the published
-modules and show heavier pages (charts, task lists, subprocess engines).
+
+Two heavier modules live in their own repositories and are worth reading once the
+small one makes sense: [`philomelcc/dsh-status-monitor`](https://github.com/philomelcc/dsh-status-monitor)
+(charts, sampling) and [`philomelcc/dsh-downloads`](https://github.com/philomelcc/dsh-downloads)
+(task lists, subprocess engines, a Chrome extension).

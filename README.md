@@ -17,8 +17,10 @@ DeepSeek Harness 的 Web UI 以会话为中心。这个项目把它变成工作�
 | 包 | 说明 |
 |---|---|
 | [`@philomelcc/dsh-workbench`](packages/workbench) | 外壳：模块 API、顶部栏、标签切换、总览页、公共组件 |
-| [`@philomelcc/dsh-status-monitor`](packages/status-monitor) | 磁盘 / 硬件 / 端口 / 用量四张卡片，支持放大到整页 |
-| [`@philomelcc/dsh-downloads`](packages/download-center) | 下载队列（aria2 + 迅雷双引擎）、磁力链接、会话下载记录 |
+| [`@philomelcc/dsh-status-monitor`](https://github.com/philomelcc/dsh-status-monitor) | 磁盘 / 硬件 / 端口 / 用量四张卡片，支持放大到整页 |
+| [`@philomelcc/dsh-downloads`](https://github.com/philomelcc/dsh-downloads) | 下载队列（aria2 + 迅雷双引擎）、磁力链接、会话下载记录 |
+
+后两个是**独立仓库里的插件**，本仓库只提供外壳。它们不依赖外壳：装在工作台里就出现在顶部标签栏，没装工作台时自己就是原生侧栏里的入口。
 
 另外 [`packages/port-monitor`](packages/port-monitor) 是仓库内的示例模块（`private: true`，不发 npm）：它演示一个最小完整的模块包长什么样，想直接复制的话用 [`template/`](template)。
 
@@ -56,8 +58,6 @@ ctx.effect(() => wb.registerView({
 
 ```
 packages/workbench         外壳
-packages/status-monitor    官方模块
-packages/download-center   官方模块
 packages/port-monitor      示例模块（私有，不发布）
 template/                  复制即用的模块起点
 docs/                      契约、快速开始、模块登记、发布流程

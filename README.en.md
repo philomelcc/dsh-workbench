@@ -19,8 +19,10 @@ The shell is deliberately thin — it owns layout, the tab row and a handful of 
 | package | what it is |
 |---|---|
 | [`@philomelcc/dsh-workbench`](packages/workbench) | the shell: module API, top bar, tab switcher, overview page, shared components |
-| [`@philomelcc/dsh-status-monitor`](packages/status-monitor) | disk / hardware / ports / usage cards with a full-page zoom |
-| [`@philomelcc/dsh-downloads`](packages/download-center) | download queue with aria2 + Xunlei backends, magnet links, session history |
+| [`@philomelcc/dsh-status-monitor`](https://github.com/philomelcc/dsh-status-monitor) | disk / hardware / ports / usage cards with a full-page zoom |
+| [`@philomelcc/dsh-downloads`](https://github.com/philomelcc/dsh-downloads) | download queue with aria2 + Xunlei backends, magnet links, session history |
+
+The last two are plugins in **their own repositories**; this repo only ships the shell. They do not need it: with the workbench installed they appear as tabs, without it they become native sidebar entries on their own.
 
 [`packages/port-monitor`](packages/port-monitor) is an in-repo example (`private`, not published to npm): it shows what a complete minimal module package looks like. To start a module, copy [`template/`](template).
 
@@ -58,8 +60,6 @@ Copy [`template/`](template) to start, or read [`packages/port-monitor`](package
 
 ```
 packages/workbench         the shell bundle
-packages/status-monitor    official module
-packages/download-center   official module
 packages/port-monitor      example module (private, not published)
 template/                  copy-me starting point for a new module
 docs/                      SPEC, getting started, module registry, publishing
