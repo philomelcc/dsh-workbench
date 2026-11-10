@@ -18,7 +18,7 @@ Each module is an independent DSH bundle package:
 ├── package.json          # bundle declaration + dsh.client
 ├── cordis.patch.yml      # one insert row, id = module id
 ├── index.js              # Host half: data collection + HTTP routes
-├── client.js             # Client half: the page + registerView()
+├── client.js             # Client half: the page + its registration path
 ├── locale/en.json        # Plugin Manager metadata (meta.title/description)
 ├── locale/zh.json
 └── icon.svg
@@ -29,27 +29,51 @@ happens through the runtime `workbench` service and public HTTP endpoints.
 
 ## Registering the page
 
-```js
-const wb = ctx.get('workbench');
-if (!wb) return;
-if (wb.apiVersion !== 1) {
-  console.warn('[my-module] needs workbench apiVersion 1, got ' + wb.apiVersion);
-  return;
-}
+A module is **optional-shell**: it works with the workbench installed and without
+it. Resolve the service at apply time and register the same page two ways —
+`load` must stay `['slots']` only, or the module never starts on a profile that
+has no shell.
 
-ctx.effect(() => wb.registerView({
-  id: 'my-module',        // short kebab-case id, also the main-slot key
-  title: '我的模块',       // tab label
-  icon: MyIcon,           // optional React component ({ size, active })
-  component: MyView,      // the page itself
-  order: 50,              // tab order, lower = further left
-  subtitle: '…',          // optional
-  badge: () => 0,         // optional: () => number | string | null
-}), 'my-module: view');
+```js
+return {
+  inject: ['slots'],
+  apply(ctx) {
+    const wb = ctx.get('workbench');
+
+    if (wb && wb.apiVersion === 1) {
+      // With the shell: one page in the workbench tab row.
+      ctx.effect(() => wb.registerView({
+        id: 'my-module',        // short kebab-case id, also the main-slot key
+        title: '我的模块',       // tab label
+        icon: MyIcon,           // optional React component ({ size, active })
+        component: MyView,      // the page itself
+        order: 50,              // tab order, lower = further left
+        subtitle: '…',          // optional
+        badge: () => 0,         // optional: () => number | string | null
+      }), 'my-module: view');
+      return;
+    }
+
+    // Without the shell: a native sidebar entry plus the page it opens.
+    ctx.effect(() => ctx.slots.inject('sidebar.panellist', () => ctx.slots.register({
+      name: 'sidebar.panellist', id: 'my-module', order: 50, label: '我的模块',
+    }, MyIcon)), 'my-module: sidebar entry');
+    ctx.effect(() => ctx.slots.inject('main', () => ctx.slots.register(
+      { name: 'main', key: 'my-module' }, MyView,
+    )), 'my-module: main view');
+  },
+};
 ```
 
 `registerView` returns a disposer; always wrap it in `ctx.effect` so the page
-is unregistered when the plugin unloads.
+is unregistered when the plugin unloads. The standalone path uses the same
+`main` key and `sidebar.panellist` id as the built-in panels, which is what
+makes it appear in the native sidebar exactly like Plugins or Automations.
+
+The shell page and the standalone page are **the same component**: do not read
+`wb.tokens` / `wb.components` at render time. Copy the palette values into a
+local fallback (they are plain `var(--dsw-alias-*)` strings) or use the CSS
+variables directly, so the page renders identically on either path.
 
 | field | required | meaning |
 |---|---|---|

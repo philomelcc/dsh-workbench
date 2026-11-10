@@ -9,7 +9,7 @@
 | `package.json` | `name` → `@你的scope/dsh-<module>` |
 | `cordis.patch.yml` | `id` → `<module>`（短名），`name` → 包名 |
 | `client.js` | 最顶部的 `id:` → 包名 |
-| `client.js` | `registerView({ id, title, … })` → `<module>` + 一个中文标题 |
+| `client.js` | 页面组件名 + 改名后的 `id`/`title`；`apply()` 里保留两条注册路径（有工作台 → `registerView`，没有 → `sidebar.panellist` + `main`） |
 
 入口 id 和包名必须一致——DSH 用那个字符串解析 bundle。视图 id 是短名（`my-module`），包名带 scope（`@your-scope/dsh-my-module`）。
 

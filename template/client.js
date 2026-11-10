@@ -52,21 +52,31 @@ window.__ModuleLoader__.load({
     }
 
     return {
-      inject: ['slots', 'workbench'],
+      // `slots` only: the workbench is optional, resolved at apply time.
+      inject: ['slots'],
       apply(ctx) {
         const wb = ctx.get('workbench');
-        if (!wb) {
-          console.warn('[my-module] workbench service missing; registration skipped');
+
+        if (wb && wb.apiVersion === 1) {
+          // Installed alongside the shell: one page in the workbench tab row.
+          ctx.effect(() => wb.registerView({
+            id: 'my-module',
+            title: '我的模块',
+            icon: TemplateIcon,
+            component: TemplateView,
+            order: 60,
+          }), 'my-module: view');
           return;
         }
 
-        ctx.effect(() => wb.registerView({
-          id: 'my-module',
-          title: '我的模块',
-          icon: TemplateIcon,
-          component: TemplateView,
-          order: 60,
-        }), 'my-module: view');
+        // No shell: publish the same pair the built-in panels use — a sidebar
+        // entry plus the page it opens — so the module still stands alone.
+        ctx.effect(() => ctx.slots.inject('sidebar.panellist', () => ctx.slots.register({
+          name: 'sidebar.panellist', id: 'my-module', order: 60, label: '我的模块',
+        }, TemplateIcon)), 'my-module: sidebar entry');
+        ctx.effect(() => ctx.slots.inject('main', () => ctx.slots.register(
+          { name: 'main', key: 'my-module' }, TemplateView,
+        )), 'my-module: main view');
       },
     };
   },
