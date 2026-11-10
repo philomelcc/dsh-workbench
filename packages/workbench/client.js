@@ -317,6 +317,19 @@ window.__ModuleLoader__.load({
     // ---------- settings icon & page ----------
     const SETTINGS_VIEW_ID = 'workbench-settings';
 
+    // A panel with its own tab strip: the workbench's mark, distinct from the
+    // native "More" grid (four squares) so the two do not read alike.
+    function IconWorkbenchTabs(props) {
+      const size = props.size || 20;
+      return h('svg', { viewBox: '0 0 24 24', width: size, height: size, 'aria-hidden': true, fill: 'none' },
+        h('rect', { x: 3.5, y: 4.5, width: 17, height: 15, rx: 2.5, stroke: 'currentColor', strokeWidth: 1.5 }),
+        h('path', { d: 'M3.5 9.2h17', stroke: 'currentColor', strokeWidth: 1.4 }),
+        h('circle', { cx: 6.4, cy: 6.85, r: 0.85, fill: 'currentColor' }),
+        h('circle', { cx: 9.4, cy: 6.85, r: 0.85, fill: 'currentColor' }),
+        h('path', { d: 'M6.2 13.2h5.6M6.2 16h8.4', stroke: 'currentColor', strokeWidth: 1.4, strokeLinecap: 'round' }),
+      );
+    }
+
     function IconSettings(props) {
       const size = props.size || 20;
       return h('svg', { viewBox: '0 0 24 24', width: size, height: size, 'aria-hidden': true, fill: 'none' },
@@ -1139,7 +1152,7 @@ window.__ModuleLoader__.load({
                 cursor: 'pointer', flex: '0 0 auto', transition: 'background .15s, color .15s',
               },
             },
-              h(WorkbenchIcon, { size: 18 }),
+              h(IconWorkbenchTabs, { size: 18 }),
               h('span', { className: 'wb-nav-label' }, '工作台'),
             ),
             h(PanelMirror),
