@@ -1125,7 +1125,8 @@ window.__ModuleLoader__.load({
         return h('div', { ref: rootRef, style: { position: 'fixed', top: 0, left: 0, right: 0, height: TOPBAR_HEIGHT, zIndex: 100, pointerEvents: 'auto', display: 'flex', flexDirection: 'column', background: 'var(--dsw-alias-bg-base)', borderBottom: '1px solid var(--dsw-alias-border-l1)' } },
           h('div', { style: { height: 56, display: 'flex', alignItems: 'center', gap: 10, padding: '0 14px' } },
             h('div', { className: 'wb-topbar-brand', style: { width: 214, flex: '0 0 auto' } }),
-            h(PanelMirror),
+            // System-level entry, first in the top-left corner: the workbench's
+            // own mark opens its settings (feature switches + module list).
             h('button', {
               type: 'button',
               className: 'wb-nav-item wb-settings-entry',
@@ -1138,9 +1139,10 @@ window.__ModuleLoader__.load({
                 cursor: 'pointer', flex: '0 0 auto', transition: 'background .15s, color .15s',
               },
             },
-              h(IconSettings, { size: 18 }),
-              h('span', { className: 'wb-nav-label' }, '设置'),
+              h(WorkbenchIcon, { size: 18 }),
+              h('span', { className: 'wb-nav-label' }, '工作台'),
             ),
+            h(PanelMirror),
             enabled.theme ? h(ThemeSwitcher) : null,
           ),
           h('div', { style: { height: 45, display: 'flex', alignItems: 'center', gap: 8, padding: '0 14px', borderTop: '1px solid var(--dsw-alias-border-l1)' } },
