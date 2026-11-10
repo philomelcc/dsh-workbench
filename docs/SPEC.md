@@ -5,11 +5,33 @@
 > This is the contract between the workbench shell and a module. A module built
 > against `apiVersion 1` keeps working on every shell that still reports `1`.
 
+## The navigation model
+
+The shell separates two kinds of navigation that the stock sidebar flattens into
+one list:
+
+| layer | what belongs there | how a plugin lands there |
+|---|---|---|
+| **system bar** (top bar, mirrors the native sidebar rows) | system-level controls: plugins, automations, anything that manages the running harness | registers nothing; the native DSH entry is mirrored automatically |
+| **module row** (second top-bar line) | application surfaces: a page that owns the central area | registers a module with this contract |
+
+Consequences worth knowing before writing a module:
+
+- **Registration is opt-in.** A plugin that never registers keeps working exactly
+  as it does without the shell, and the shell keeps no registry of its own.
+- **A module is an application, not a control.** If the plugin's job is to
+  configure or manage the harness, it belongs in the system bar; if it is a
+  workspace you spend time in, it belongs in the module row.
+- **The tiers are independent of installation.** A module also runs without the
+  shell (it becomes a native sidebar entry then); the tier only says where its
+  entry lives when the shell is present.
+
 ## Shapes of a module
 
 A workbench module is **one page** in the workbench switcher (the second row of
-the top bar). There is no sidebar entry and no floating widget — the shell used
-to support widgets and dropped them in 2026; do not build one.
+the top bar). There is no sidebar entry when the shell is installed and no
+floating widget — the shell used to support widgets and dropped them in 2026; do
+not build one.
 
 Each module is an independent DSH bundle package:
 

@@ -12,6 +12,21 @@ A tabbed workspace shell for [DeepSeek Harness](https://github.com/deepseek-ai/d
 
 DeepSeek Harness ships a conversation-centric Web UI. This project turns it into a workspace: a fixed system bar on top (brand, global icons, account, balance, restart), a workbench switcher underneath, and the conversation area below. Every module gets a full page of the central area while the session list on the left keeps working.
 
+**Navigation stratification is the core idea.** The stock sidebar flattens two kinds of things into one list:
+
+- **system-level controls** — plugins, automations, the entries that manage the running system;
+- **application surfaces** — a status monitor, a download manager, a design library: anything that owns a full page.
+
+The workbench splits them into two layers. Application surfaces register as **modules** and appear in the module row on the second top-bar line; everything that does not register stays in the **system bar**, which mirrors the native sidebar rows and delegates clicks back to them.
+
+| plugin kind | where it shows up | what it has to do |
+|---|---|---|
+| system-level | system bar | nothing — keep the native DSH registration |
+| application-level | module row | register a module (see [SPEC.md](docs/SPEC.md)) |
+| neither | nowhere | — |
+
+That makes registration **optional**: a third-party plugin never has to know the workbench exists, and the workbench never keeps a plugin list of its own — whoever registers a module simply gets one more tab.
+
 The shell is deliberately thin — it owns layout, the tab row and a handful of UI primitives. Modules own their data and their page. They never import each other, and they talk to the shell through one runtime service.
 
 ## Packages
