@@ -301,19 +301,6 @@ window.__ModuleLoader__.load({
       return api;
     }
 
-    // ---------- workbench icon ----------
-    function WorkbenchIcon(props) {
-      const size = props.size || 20;
-      return h('svg', {
-        viewBox: '0 0 24 24', width: size, height: size, 'aria-hidden': true, fill: 'none',
-      },
-        h('rect', { x: 3.5, y: 3.5, width: 7, height: 7, rx: 1.6, stroke: 'currentColor', strokeWidth: 1.5 }),
-        h('rect', { x: 13.5, y: 3.5, width: 7, height: 7, rx: 1.6, stroke: 'currentColor', strokeWidth: 1.5 }),
-        h('rect', { x: 3.5, y: 13.5, width: 7, height: 7, rx: 1.6, stroke: 'currentColor', strokeWidth: 1.5 }),
-        h('rect', { x: 13.5, y: 13.5, width: 7, height: 7, rx: 1.6, stroke: 'currentColor', strokeWidth: 1.5 }),
-      );
-    }
-
     // ---------- settings icon & page ----------
     const SETTINGS_VIEW_ID = 'workbench-settings';
 
@@ -399,8 +386,10 @@ window.__ModuleLoader__.load({
     function WorkbenchSettings() {
       const enabled = useFeatures();
       const reg = useRegistry();
+      // Only tabbed modules belong here: the shell's own overview and this
+      // settings page live in the system bar, not in the module row.
       const views = Array.from(reg.views.values())
-        .filter((item) => item.id !== SETTINGS_VIEW_ID)
+        .filter((item) => item.tab !== false)
         .sort((a, b) => a.order - b.order);
 
       function toggleRow(key) {
@@ -1815,7 +1804,7 @@ body[data-wb-paper="1"] [class*="_hoverPath"] {
           id: 'workbench',
           title: '工作台',
           subtitle: '工作台总览：已接入的视图与浮窗',
-          icon: WorkbenchIcon,
+          icon: IconWorkbenchTabs,
           component: WorkbenchOverview,
           order: -10,
           tab: false,
