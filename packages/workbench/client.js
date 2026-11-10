@@ -312,7 +312,15 @@ window.__ModuleLoader__.load({
     const TOPBAR_HEIGHT = 102;
 
     async function restartDsh() {
-      try { await fetch('/wb/workbench/restart', { method: 'POST' }); } catch (_e) {}
+      try {
+        const res = await fetch('/wb/workbench/restart', { method: 'POST' });
+        const json = await res.json().catch(() => null);
+        if (json && json.ok === false) {
+          window.alert(json.hint || '这台机器上没有可用的重启管理器，请手动重启 DSH Web。');
+        }
+      } catch (_error) {
+        /* offline: nothing to do */
+      }
     }
 
     function createBalanceStore(ctx) {

@@ -2,11 +2,38 @@
  * Host half of the workbench shell.
  *
  * The workbench's value lives in the Client half (module API + overview page).
- * The only Host duty is the one-click restart endpoint, which stops the running
- * web host in a detached process and lets the scheduled task relaunch it, so the
- * current page simply reconnects.
+ * The only Host duty is the one-click restart endpoint: it stops the running web
+ * host and lets an external supervisor start it again, so the current page
+ * simply reconnects. A restart is only offered when such a supervisor is
+ * actually present — exiting without one would strand the user with a dead
+ * server.
  */
 import { execSync } from 'node:child_process';
+
+/** Supervisor that can start the host again, resolved per platform. */
+function resolveSupervisor() {
+  const command = process.env.DSH_RESTART_CMD || '';
+  if (command) return { kind: 'command', command };
+  if (process.platform !== 'win32') return null;
+  // Windows: a scheduled task. DSH_RESTART_TASK overrides the name, so the
+  // default stays useful for the author's machine without hardcoding it for
+  // everyone else.
+  const task = process.env.DSH_RESTART_TASK || 'philomel-dsh-web';
+  try {
+    execSync(`schtasks /query /tn ${JSON.stringify(task)}`, { windowsHide: true, stdio: 'ignore' });
+    return { kind: 'task', task };
+  } catch (_error) {
+    return null;
+  }
+}
+
+function startSupervisor(supervisor) {
+  if (supervisor.kind === 'command') {
+    execSync(supervisor.command, { windowsHide: true, stdio: 'ignore' });
+    return;
+  }
+  execSync(`schtasks /run /tn ${JSON.stringify(supervisor.task)}`, { windowsHide: true, stdio: 'ignore' });
+}
 
 export const inject = ['webServer'];
 
@@ -28,12 +55,21 @@ export function apply(ctx) {
         res.end('method not allowed\n');
         return;
       }
-      // 先看 3080 是否在跑，再决定要不要让 ensure 脚本拉起。
-      // 响应先到达页面，然后本进程退出，由每 5 分钟一次的 ensure 任务重新拉起。
+      // Refuse without a supervisor: exiting here would leave no server behind.
+      const supervisor = resolveSupervisor();
+      if (!supervisor) {
+        res.writeHead(409, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({
+          ok: false,
+          reason: 'no-supervisor',
+          hint: '这台机器上没有可用的重启管理器，请手动重启 DSH Web。',
+        }));
+        return;
+      }
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
       res.end(JSON.stringify({ ok: true, restarting: true, etaSeconds: 300 }));
       setTimeout(() => {
-        try { execSync('schtasks /run /tn philomel-dsh-web', { windowsHide: true, stdio: 'ignore' }); } catch (_e) {}
+        try { startSupervisor(supervisor); } catch (_e) { /* best effort */ }
         process.exit(0);
       }, 300);
     },
