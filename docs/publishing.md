@@ -1,9 +1,18 @@
 # Publishing
 
-The four packages are published to npm under the `@philomelcc` scope. The shell
-and the modules are independent packages — a module does not depend on the shell
-in npm terms (the dependency is the runtime `workbench` service), so they can be
-released separately.
+Packages are published to npm under the `@philomelcc` scope, but they no longer
+live in one repository:
+
+| package | repository |
+|---|---|
+| `@philomelcc/dsh-workbench` | this repo (`packages/workbench`) |
+| `@philomelcc/dsh-status-monitor` | [philomelcc/dsh-status-monitor](https://github.com/philomelcc/dsh-status-monitor) |
+| `@philomelcc/dsh-downloads` | [philomelcc/dsh-downloads](https://github.com/philomelcc/dsh-downloads) |
+
+They stay independent packages: a module does not depend on the shell in npm
+terms (the dependency is the runtime `workbench` service), so each repo releases
+on its own schedule. Note that a published package's `repository` field must
+match the repository its market entry points at, or the two are not linked.
 
 ## One-time setup
 
@@ -17,19 +26,29 @@ package; an organization scope must be created on npmjs.com first.
 
 ## Before publishing
 
+In the repository that owns the package:
+
 ```powershell
 pnpm install
 npm run check
-pnpm -r publish --dry-run --access public   # inspect what would ship
+pnpm publish --dry-run --access public     # inspect what would ship
 ```
 
-Check each package's `files` list in `package.json` — pnpm honours it, and a
+Check the package's `files` list in `package.json` — pnpm honours it, and a
 missing entry (`lib/`, `chrome-extension/`) ships a broken module.
 
 ## Release
 
+This repo:
+
 ```powershell
-pnpm -r publish --access public
+pnpm -r publish --access public     # only packages/workbench (port-monitor is private)
+```
+
+A module repository:
+
+```powershell
+pnpm publish --access public
 ```
 
 Publish order does not matter for correctness (no inter-package dependencies),
@@ -39,10 +58,10 @@ but publishing the shell first reads better in the npm feed.
 
 - Shell: bump `apiVersion` in `packages/workbench/client.js` **only** on a
   breaking contract change, and say so in the release notes.
-- Modules: their own semver. A module may bump a minor version independently of
-  the shell.
-- Tag the repository after a release, e.g. `git tag workbench-v0.1.1` or
-  `git tag status-monitor-v0.1.1`.
+- Modules: their own semver, in their own repository. A module may bump a minor
+  version independently of the shell.
+- Tag inside the repository that released, e.g. `git tag v0.1.2` in
+  `dsh-workbench` or in `dsh-status-monitor`; each repo has its own tag namespace.
 
 ## After publishing
 
@@ -56,15 +75,15 @@ dsh plugin --profile test add @philomelcc/dsh-status-monitor
 
 ## Publishing a module (yours or a new official one)
 
-Every workbench module is an independent npm package, so a new module ships the
-same way as the four in this repo. The rule is the same for us and for anyone
-building on the contract:
+Every workbench module is an independent npm package — including the two
+official ones, which live in their own repositories. The rule is the same for us
+and for anyone building on the contract:
 
 1. **Scope and name**: `@your-scope/dsh-<module>`. The scope must exist on npm;
    a personal scope is created by the first publish.
-2. **package.json**: `license`, `repository` (plus `directory` when the module
-   lives inside a monorepo), a `files` list that includes everything the module
-   loads at runtime (`lib/`, `chrome-extension/`, …), and
+2. **package.json**: `license`, `repository` (drop `directory` unless the module
+   really lives in a monorepo), a `files` list that includes everything the
+   module loads at runtime (`lib/`, `chrome-extension/`, …), and
    `publishConfig: { "access": "public" }` — scoped packages are private by
    default.
 3. **Verify locally before publishing.** `dsh plugin --profile test add <dir>`,
