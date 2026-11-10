@@ -34,7 +34,7 @@ dsh plugin --profile web add @philomelcc/dsh-downloads
 
 装完重启一次 Web UI，标签就出现在顶部第二行。手动安装、故障排查见[《快速开始》](docs/getting-started.md)。
 
-下载中心需要 [aria2](https://aria2.github.io/) 才能下 HTTP/磁力/种子——仓库不带这个二进制（GPLv2）。用 `winget install aria2.aria2` 装，或者把 `ARIA2C_PATH` 指到已有的可执行文件。
+模块自己的额外依赖（比如下载中心要的 aria2）写在各自仓库的 README 里，装那个模块时再看。
 
 ## 写一个模块
 
@@ -73,4 +73,4 @@ scripts/check.mjs          对全部脚本跑 node --check
 
 ## 许可证
 
-MIT。第三方引擎保持各自许可：aria2（GPLv2）由用户自行安装，迅雷 SDK 由下载中心按需从 npm 获取。
+MIT。

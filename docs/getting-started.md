@@ -4,11 +4,10 @@
 
 - DeepSeek Harness `0.2.x` with the Web UI (`dsh web`, default port 3080).
 - Node.js 22+ (DSH ships its own runtime; this is for local checks).
-- Windows for the full experience: the port monitor and status monitor read
-  Windows process/disk data. The shell itself is cross-platform.
-- Optional: [aria2](https://aria2.github.io/) for the download center
-  (HTTP, magnet, torrent). Without it, downloads fall back to the Xunlei engine
-  or fail with a clear message.
+- Windows for the full experience: the status monitor reads Windows
+  process/disk data. The shell itself is cross-platform.
+
+A module may need extra software; its own README says what and why.
 
 ## Install
 

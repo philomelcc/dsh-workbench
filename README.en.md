@@ -36,7 +36,7 @@ dsh plugin --profile web add @philomelcc/dsh-downloads
 
 Restart the Web UI once. The workbench tabs appear on the second top-bar row. Details, manual install and troubleshooting are in [docs/getting-started.md](docs/getting-started.md).
 
-The download center needs [aria2](https://aria2.github.io/) for HTTP/magnet/torrent transfers — the repo does not ship the binary (it is GPLv2). Install it with `winget install aria2.aria2`, or point `ARIA2C_PATH` at an existing executable.
+Extra dependencies a module needs (aria2 for the download center, for example) are documented in that module's own README.
 
 ## Build a module
 
@@ -74,4 +74,4 @@ scripts/check.mjs          node --check across every shipped script
 
 ## License
 
-MIT. Third-party engines keep their own licenses: aria2 (GPLv2) is installed separately, and the Xunlei SDK is pulled from npm by the download center.
+MIT.
