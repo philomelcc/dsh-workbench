@@ -29,6 +29,20 @@ That makes registration **optional**: a third-party plugin never has to know the
 
 The shell is deliberately thin — it owns layout, the tab row and a handful of UI primitives. Modules own their data and their page. They never import each other, and they talk to the shell through one runtime service.
 
+## Built-in extras
+
+Besides the navigation layers, the shell ships a few **individually switchable** extras. The entry point is the gear in the system bar (workbench settings):
+
+| extra | default | what it does |
+|---|---|---|
+| Theme switch | on | dark / light / paper swatches in the top bar |
+| Balance | on | account balance from `remote.account`, click to top up |
+| Restart | on | one-click restart of the web host; **needs an external supervisor** (scheduled task or `DSH_RESTART_CMD`) — without one the button reports it instead of killing the server |
+| Running glow | on | flowing glow around the session row while it is working |
+| Turn cost | on | token and cost estimate shown after each turn |
+
+If you only want the navigation layers, turn the rest off and let another plugin own them — the switches persist in `localStorage`. The settings page also lists the modules that registered a page (they are the tabs in the second row).
+
 ## Packages
 
 | package | what it is |

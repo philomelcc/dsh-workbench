@@ -21,6 +21,61 @@ window.__ModuleLoader__.load({
       labelSecondary: 'var(--dsw-alias-label-secondary)',
     };
 
+    // ---------- feature switches ----------
+    // The shell is optional decoration on top of the navigation layer: someone
+    // who only wants the tab row can turn the rest off and let another plugin
+    // own balances, themes or cost estimates. Every switch defaults to on, so
+    // installing the shell keeps the previous behaviour.
+    const FEATURE_KEYS = ['theme', 'balance', 'restart', 'glow', 'cost'];
+    const FEATURE_DEFAULTS = { theme: true, balance: true, restart: true, glow: true, cost: true };
+    const FEATURE_LABELS = {
+      theme: { title: '主题切换', hint: '顶部栏的深色 / 浅色 / 纸色三个色块' },
+      balance: { title: '余额显示', hint: '顶部栏的账户余额' },
+      restart: { title: '重启按钮', hint: '顶部栏的一键重启（需要外部管理器）' },
+      glow: { title: '进行中光效', hint: '会话运行中时列表行的流动光效' },
+      cost: { title: '单次消耗估计', hint: '每轮对话结束时显示的 token 与费用估算' },
+    };
+
+    function createFeaturesStore() {
+      const KEY = 'dsh-workbench:features';
+      const listeners = new Set();
+      let state = read();
+
+      function read() {
+        const next = { ...FEATURE_DEFAULTS };
+        try {
+          const raw = localStorage.getItem(KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            for (const key of FEATURE_KEYS) {
+              if (typeof parsed[key] === 'boolean') next[key] = parsed[key];
+            }
+          }
+        } catch (_error) { /* storage disabled */ }
+        return next;
+      }
+
+      return {
+        getSnapshot() { return state; },
+        set(key, value) {
+          if (!FEATURE_KEYS.includes(key) || state[key] === value) return;
+          state = { ...state, [key]: value };
+          try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (_error) { /* storage disabled */ }
+          for (const fn of listeners) fn();
+        },
+        subscribe(fn) {
+          listeners.add(fn);
+          return () => { listeners.delete(fn); };
+        },
+      };
+    }
+
+    const features = createFeaturesStore();
+
+    function useFeatures() {
+      return React.useSyncExternalStore(features.subscribe, features.getSnapshot);
+    }
+
     // ---------- shared UI primitives ----------
     function StatusDot(props) {
       const ok = props.ok !== false;
@@ -259,6 +314,20 @@ window.__ModuleLoader__.load({
       );
     }
 
+    // ---------- settings icon & page ----------
+    const SETTINGS_VIEW_ID = 'workbench-settings';
+
+    function IconSettings(props) {
+      const size = props.size || 20;
+      return h('svg', { viewBox: '0 0 24 24', width: size, height: size, 'aria-hidden': true, fill: 'none' },
+        h('circle', { cx: 12, cy: 12, r: 3.2, stroke: 'currentColor', strokeWidth: 1.5 }),
+        h('path', {
+          d: 'M19.4 13.5a7.7 7.7 0 0 0 0-3l1.7-1.2-1.9-3.3-2 .8a7.6 7.6 0 0 0-2.6-1.5L14.3 3h-3.8l-.3 2.3a7.6 7.6 0 0 0-2.6 1.5l-2-.8-1.9 3.3 1.7 1.2a7.7 7.7 0 0 0 0 3l-1.7 1.2 1.9 3.3 2-.8a7.6 7.6 0 0 0 2.6 1.5l.3 2.3h3.8l.3-2.3a7.6 7.6 0 0 0 2.6-1.5l2 .8 1.9-3.3z',
+          stroke: 'currentColor', strokeWidth: 1.4, strokeLinejoin: 'round',
+        }),
+      );
+    }
+
     // ---------- overview page ----------
     function WorkbenchOverview() {
       const reg = useRegistry();
@@ -310,6 +379,100 @@ window.__ModuleLoader__.load({
 
     // ────────────────────────── top bar (stage 1) ──────────────────────────
     const TOPBAR_HEIGHT = 102;
+
+    // ---------- settings page ----------
+    // Reachable from the gear in the system bar. Two jobs: turn the shell's own
+    // extras on or off, and show which modules registered a page.
+    function WorkbenchSettings() {
+      const enabled = useFeatures();
+      const reg = useRegistry();
+      const views = Array.from(reg.views.values())
+        .filter((item) => item.id !== SETTINGS_VIEW_ID)
+        .sort((a, b) => a.order - b.order);
+
+      function toggleRow(key) {
+        const meta = FEATURE_LABELS[key];
+        const on = enabled[key];
+        return h('div', {
+          key,
+          style: {
+            display: 'flex', alignItems: 'center', gap: 14,
+            padding: '12px 14px', borderBottom: '1px solid ' + tokens.border1,
+          },
+        },
+          h('div', { style: { flex: '1 1 auto', minWidth: 0 } },
+            h('div', { style: { fontWeight: 550 } }, meta.title),
+            h('div', { style: { fontSize: 11, color: tokens.labelSecondary } }, meta.hint),
+          ),
+          h('button', {
+            type: 'button',
+            role: 'switch',
+            'aria-checked': on ? 'true' : 'false',
+            'aria-label': meta.title,
+            onClick: () => features.set(key, !on),
+            style: {
+              position: 'relative', width: 40, height: 22, borderRadius: 999,
+              border: '1px solid ' + (on ? 'var(--dsw-alias-brand-primary)' : tokens.border2),
+              background: on ? 'var(--dsw-alias-brand-primary)' : tokens.bgLayer2,
+              cursor: 'pointer', flex: '0 0 auto', padding: 0,
+              transition: 'background .15s, border-color .15s',
+            },
+          },
+            h('span', {
+              'aria-hidden': true,
+              style: {
+                position: 'absolute', top: 2, left: on ? 20 : 2,
+                width: 16, height: 16, borderRadius: '50%',
+                background: on ? '#fff' : 'var(--dsw-alias-label-secondary)',
+                transition: 'left .15s',
+              },
+            }),
+          ),
+        );
+      }
+
+      function viewRow(item) {
+        return h('div', {
+          key: item.id,
+          style: {
+            display: 'flex', alignItems: 'center', gap: 10,
+            padding: '10px 14px', borderBottom: '1px solid ' + tokens.border1,
+          },
+        },
+          h('div', { style: { width: 22, height: 22, color: tokens.labelSecondary, flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+            item.icon ? h(item.icon, { size: 18, active: false }) : null),
+          h('div', { style: { flex: '1 1 auto', minWidth: 0 } },
+            h('div', { style: { fontWeight: 550, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, item.title),
+            h('div', { style: { fontSize: 11, color: tokens.labelSecondary } },
+              (item.tab === false ? '无标签页 · ' : '标签页 · ') + item.id + ' · order ' + item.order),
+          ),
+        );
+      }
+
+      return h('div', {
+        style: {
+          padding: '24px 28px', maxWidth: 920, margin: '0 auto', height: '100%',
+          boxSizing: 'border-box', overflowY: 'auto',
+          color: tokens.label, background: tokens.bgBase,
+        },
+      },
+        h('h2', { style: { margin: '0 0 4px', fontSize: 20, fontWeight: 650 } }, '工作台设置'),
+        h('div', { style: { fontSize: 13, color: tokens.labelSecondary, marginBottom: 20 } },
+          '只想要导航分层的话，上面这些都可以关掉，交给别的插件。'),
+        h('div', null,
+          h(SectionHeader, { title: '功能', subtitle: '外壳自带、可以单独关闭的额外功能' }),
+          h(Card, null, FEATURE_KEYS.map(toggleRow)),
+        ),
+        h('div', { style: { marginTop: 20 } },
+          h(SectionHeader, { title: '已注册的模块', subtitle: '它们出现在顶部第二行的模块栏' }),
+          h(Card, null,
+            views.length === 0
+              ? h(EmptyState, { text: '还没有模块注册页面。' })
+              : views.map(viewRow),
+          ),
+        ),
+      );
+    }
 
     async function restartDsh() {
       try {
@@ -805,6 +968,7 @@ window.__ModuleLoader__.load({
       function TopBar(props) {
         const rootRef = React.useRef(null);
         const tabsRef = React.useRef(null);
+        const enabled = useFeatures();
         const reg = useRegistry();
         const usePanelInfo = props.usePanelInfo;
         const panelInfo = typeof usePanelInfo === 'function' ? usePanelInfo((s) => s) : null;
@@ -962,7 +1126,22 @@ window.__ModuleLoader__.load({
           h('div', { style: { height: 56, display: 'flex', alignItems: 'center', gap: 10, padding: '0 14px' } },
             h('div', { className: 'wb-topbar-brand', style: { width: 214, flex: '0 0 auto' } }),
             h(PanelMirror),
-            h(ThemeSwitcher),
+            h('button', {
+              type: 'button',
+              className: 'wb-nav-item wb-settings-entry',
+              'aria-label': '工作台设置',
+              onClick: () => selectPanel(SETTINGS_VIEW_ID),
+              style: {
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                gap: 4, height: 34, padding: '0 9px', borderRadius: 8, border: 'none',
+                background: 'transparent', color: 'var(--dsw-alias-label-secondary)',
+                cursor: 'pointer', flex: '0 0 auto', transition: 'background .15s, color .15s',
+              },
+            },
+              h(IconSettings, { size: 18 }),
+              h('span', { className: 'wb-nav-label' }, '设置'),
+            ),
+            enabled.theme ? h(ThemeSwitcher) : null,
           ),
           h('div', { style: { height: 45, display: 'flex', alignItems: 'center', gap: 8, padding: '0 14px', borderTop: '1px solid var(--dsw-alias-border-l1)' } },
             h('div', { ref: tabsRef, style: { position: 'relative', display: 'flex', alignItems: 'center', gap: 4, flex: 1, overflowX: 'auto', overflowY: 'hidden' } },
@@ -985,12 +1164,12 @@ window.__ModuleLoader__.load({
               tabs.map(viewTab),
             ),
             h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, flex: '0 0 auto' } },
-              h(BalanceChip, null),
-              h('button', {
+              enabled.balance ? h(BalanceChip, null) : null,
+              enabled.restart ? h('button', {
                 type: 'button', title: '重启 DSH', className: 'wb-restart',
                 onClick: () => { restartDsh(ctx); },
                 style: { width: 28, height: 28, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, border: '1px solid var(--dsw-alias-border-l2)', background: 'transparent', color: 'var(--dsw-alias-label-secondary)', cursor: 'pointer', flex: '0 0 auto', transition: 'background .12s, color .12s, border-color .12s' },
-              }, h(IconRestart, { size: 15 })),
+              }, h(IconRestart, { size: 15 })) : null,
             ),
           ),
         );
@@ -1627,6 +1806,17 @@ body[data-wb-paper="1"] [class*="_hoverPath"] {
           tab: false,
         }), 'workbench: overview view');
 
+        // Settings page: no tab — it is reached from the gear in the system bar.
+        ctx.effect(() => api.registerView({
+          id: SETTINGS_VIEW_ID,
+          title: '工作台设置',
+          subtitle: '功能开关与已注册的模块',
+          icon: IconSettings,
+          component: WorkbenchSettings,
+          order: -20,
+          tab: false,
+        }), 'workbench: settings view');
+
         const balance = createBalanceStore(ctx);
         try {
           ctx.effect(() => { balance.start(); return () => balance.stop(); }, 'workbench: balance polling');
@@ -1650,15 +1840,30 @@ body[data-wb-paper="1"] [class*="_hoverPath"] {
         }
 
         const TurnCost = createTurnCost();
+        function TurnCostGated(props) {
+          const enabled = useFeatures();
+          if (!enabled.cost) return null;
+          return h(TurnCost, props);
+        }
         ctx.slots.inject('conversation.chat.turnTail', () => ctx.slots.register({
           name: 'conversation.chat.turnTail',
           id: 'workbench-turn-cost',
           order: 600,
-        }, TurnCost));
+        }, TurnCostGated));
 
         // 注意：ctx.effect 接收的是「返回 dispose 的函数」。
         // 直接传 installGlow(ctx) 的返回值会让 effect 立刻执行清理，光效刚装上就被拆掉。
-        ctx.effect(() => installGlow(ctx), 'workbench: glow');
+        // The switch can turn it off at runtime, so mount/unmount follows the store.
+        ctx.effect(() => {
+          let dispose = null;
+          const sync = () => {
+            if (dispose) { dispose(); dispose = null; }
+            if (features.getSnapshot().glow) dispose = installGlow(ctx);
+          };
+          sync();
+          const unsubscribe = features.subscribe(sync);
+          return () => { unsubscribe(); if (dispose) dispose(); };
+        }, 'workbench: glow');
 
         } catch (err) {
           console.error('[workbench] apply failed:', err);
