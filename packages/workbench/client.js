@@ -76,6 +76,61 @@ window.__ModuleLoader__.load({
       return React.useSyncExternalStore(features.subscribe, features.getSnapshot);
     }
 
+    // ---------- placement store ----------
+    // Where each entry lives: the system bar (top row), the module row (second
+    // row of page tabs), or nowhere. Registering a module only decides the
+    // default — the settings page can move anything to either row. Keys are
+    // `view:<id>` for workbench views and `native:<label>` for mirrored native
+    // sidebar rows (labels are the row names the native UI shows).
+    const PLACEMENTS = ['system', 'modules', 'hidden'];
+    const PLACEMENT_KEY = 'dsh-workbench:placement';
+
+    function createPlacementStore() {
+      const listeners = new Set();
+      let state = read();
+
+      function read() {
+        const next = {};
+        try {
+          const raw = localStorage.getItem(PLACEMENT_KEY);
+          const parsed = raw ? JSON.parse(raw) : null;
+          if (parsed && typeof parsed === 'object') {
+            for (const key of Object.keys(parsed)) {
+              if (PLACEMENTS.includes(parsed[key])) next[key] = parsed[key];
+            }
+          }
+        } catch (_error) { /* storage disabled */ }
+        return next;
+      }
+
+      return {
+        getSnapshot() { return state; },
+        get(key, fallback) {
+          const value = state[key];
+          return PLACEMENTS.includes(value) ? value : fallback;
+        },
+        set(key, value) {
+          if (!key) return;
+          const next = { ...state };
+          if (PLACEMENTS.includes(value)) next[key] = value;
+          else delete next[key];
+          state = next;
+          try { localStorage.setItem(PLACEMENT_KEY, JSON.stringify(state)); } catch (_error) { /* storage disabled */ }
+          for (const fn of listeners) fn();
+        },
+        subscribe(fn) {
+          listeners.add(fn);
+          return () => { listeners.delete(fn); };
+        },
+      };
+    }
+
+    const placement = createPlacementStore();
+
+    function usePlacement() {
+      return React.useSyncExternalStore(placement.subscribe, placement.getSnapshot);
+    }
+
     // ---------- shared UI primitives ----------
     function StatusDot(props) {
       const ok = props.ok !== false;
@@ -386,6 +441,8 @@ window.__ModuleLoader__.load({
     function WorkbenchSettings() {
       const enabled = useFeatures();
       const reg = useRegistry();
+      const placed = usePlacement();
+      const nativeItems = useNativeEntries();
       // Only tabbed modules belong here: the shell's own overview and this
       // settings page live in the system bar, not in the module row.
       const views = Array.from(reg.views.values())
@@ -451,6 +508,43 @@ window.__ModuleLoader__.load({
         );
       }
 
+      // Where an entry shows: the system bar, the module row, or nowhere.
+      const PLACEMENT_CHOICES = [
+        { id: 'system', label: '系统栏', hint: '顶部第一行' },
+        { id: 'modules', label: '模块栏', hint: '顶部第二行（标签）' },
+        { id: 'hidden', label: '隐藏', hint: '两处都不显示' },
+      ];
+
+      function placementRow(key, title, iconNode, fallback) {
+        const value = placed[key] || fallback;
+        return h('div', {
+          key,
+          style: { display: 'flex', alignItems: 'center', gap: 10, padding: '9px 14px', borderBottom: '1px solid ' + tokens.border1 },
+        },
+          h('div', { style: { width: 22, height: 22, color: tokens.labelSecondary, flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center' } }, iconNode),
+          h('div', { style: { flex: '1 1 auto', minWidth: 0, fontWeight: 550, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, title),
+          h('div', { style: { display: 'flex', gap: 4, flex: '0 0 auto' } },
+            PLACEMENT_CHOICES.map(function (choice) {
+              const on = choice.id === value;
+              return h('button', {
+                key: choice.id,
+                type: 'button',
+                title: choice.hint,
+                'aria-pressed': on ? 'true' : 'false',
+                onClick: function () { placement.set(key, choice.id); },
+                style: {
+                  height: 24, padding: '0 9px', borderRadius: 6, fontSize: 11,
+                  border: '1px solid ' + (on ? 'var(--dsw-alias-brand-primary)' : tokens.border2),
+                  background: on ? 'var(--dsw-alias-brand-primary)' : 'transparent',
+                  color: on ? 'var(--dsw-alias-bg-base)' : tokens.labelSecondary,
+                  cursor: 'pointer', transition: 'background .12s, color .12s, border-color .12s',
+                },
+              }, choice.label);
+            }),
+          ),
+        );
+      }
+
       return h('div', {
         style: {
           padding: '24px 28px', maxWidth: 920, margin: '0 auto', height: '100%',
@@ -466,11 +560,35 @@ window.__ModuleLoader__.load({
           h(Card, null, FEATURE_KEYS.map(toggleRow)),
         ),
         h('div', { style: { marginTop: 20 } },
-          h(SectionHeader, { title: '已注册的模块', subtitle: '它们出现在顶部第二行的模块栏' }),
+          h(SectionHeader, { title: '已注册的模块', subtitle: '模块注册的页面；默认出现在第二行，位置可在下面调整' }),
           h(Card, null,
             views.length === 0
               ? h(EmptyState, { text: '还没有模块注册页面。' })
               : views.map(viewRow),
+          ),
+        ),
+        h('div', { style: { marginTop: 20 } },
+          h(SectionHeader, { title: '栏位分配', subtitle: '注册成模块只决定默认位置；这里可以把任一条目放进系统栏或模块栏' }),
+          h(Card, null,
+            nativeItems.length === 0 && views.length === 0
+              ? h(EmptyState, { text: '还没有可分配的项目。' })
+              : []
+                .concat(nativeItems.map(function (item) {
+                  return placementRow(
+                    'native:' + item.label,
+                    item.label,
+                    item.html ? h('span', { style: { display: 'inline-flex', width: 17, height: 17 }, dangerouslySetInnerHTML: { __html: item.html } }) : null,
+                    'system',
+                  );
+                }))
+                .concat(views.map(function (item) {
+                  return placementRow(
+                    'view:' + item.id,
+                    item.title,
+                    item.icon ? h(item.icon, { size: 17, active: false }) : null,
+                    'modules',
+                  );
+                })),
           ),
         ),
       );
@@ -841,40 +959,52 @@ window.__ModuleLoader__.load({
     // ---------- native sidebar panel mirror ----------
     // The workbench keeps no navigation list of its own: whatever the sidebar
     // lists (Plugins, Automations, More — plus any plugin that registers a
-    // panel later) is mirrored into the top bar, click delegated to that row.
+    // panel later) is mirrored, click delegated to that row. The placement
+    // store decides whether each row shows in the system bar, the module row,
+    // or nowhere.
+    function useNativeEntries() {
+      const [items, setItems] = React.useState(function () { return []; });
+
+      React.useEffect(function () {
+        function sync() {
+          const list = document.querySelector('nav[class*="panelList"]');
+          if (!list) return;
+          const next = [];
+          Array.prototype.forEach.call(list.children, function (node) {
+            const btn = node.tagName === 'BUTTON'
+              ? node
+              : (node.querySelector ? node.querySelector('button') : null);
+            if (!btn) return;
+            const label = btn.getAttribute('aria-label') || String(node.textContent || '').trim();
+            const svg = btn.querySelector('svg');
+            next.push({ label: label || '入口', html: svg ? svg.outerHTML : '', btn: btn });
+          });
+          setItems(function (prev) {
+            const same = prev.length === next.length && prev.every(function (item, index) {
+              return item.label === next[index].label && item.html === next[index].html;
+            });
+            return same ? prev : next;
+          });
+        }
+        sync();
+        const observer = new MutationObserver(sync);
+        observer.observe(document.body, { childList: true, subtree: true });
+        return function () { observer.disconnect(); };
+      }, []);
+
+      return items;
+    }
+
     function createPanelMirror() {
       function PanelMirror() {
-        const [items, setItems] = React.useState(function () { return []; });
-
-        React.useEffect(function () {
-          function sync() {
-            const list = document.querySelector('nav[class*="panelList"]');
-            if (!list) return;
-            const next = [];
-            Array.prototype.forEach.call(list.children, function (node) {
-              const btn = node.tagName === 'BUTTON'
-                ? node
-                : (node.querySelector ? node.querySelector('button') : null);
-              if (!btn) return;
-              const label = btn.getAttribute('aria-label') || String(node.textContent || '').trim();
-              const svg = btn.querySelector('svg');
-              next.push({ label: label || '入口', html: svg ? svg.outerHTML : '', btn: btn });
-            });
-            setItems(function (prev) {
-              const same = prev.length === next.length && prev.every(function (item, index) {
-                return item.label === next[index].label && item.html === next[index].html;
-              });
-              return same ? prev : next;
-            });
-          }
-          sync();
-          const observer = new MutationObserver(sync);
-          observer.observe(document.body, { childList: true, subtree: true });
-          return function () { observer.disconnect(); };
-        }, []);
+        const items = useNativeEntries();
+        const placed = usePlacement();
+        const visible = items.filter(function (item) {
+          return placed['native:' + item.label] === 'system' || placed['native:' + item.label] === undefined;
+        });
 
         return h('div', { className: 'wb-topbar-icons', style: { display: 'flex', gap: 2, flex: 1, overflow: 'hidden' } },
-          items.map(function (item, index) {
+          visible.map(function (item, index) {
             return h('button', {
               key: item.label + ':' + index,
               type: 'button',
@@ -975,10 +1105,20 @@ window.__ModuleLoader__.load({
         const usePanelInfo = props.usePanelInfo;
         const panelInfo = typeof usePanelInfo === 'function' ? usePanelInfo((s) => s) : null;
         const activePanelId = panelInfo ? panelInfo.activePanelId : null;
-        const views = Array.from(reg.views.values())
-          .filter((item) => item.tab !== false)
+        const placed = usePlacement();
+        const viewPlacement = (id) => {
+          const value = placed['view:' + id];
+          return value === 'system' || value === 'modules' || value === 'hidden' ? value : 'modules';
+        };
+        const tabViews = Array.from(reg.views.values())
+          .filter((item) => item.tab !== false && viewPlacement(item.id) === 'modules')
           .sort((a, b) => a.order - b.order);
-        const tabs = [{ id: null, title: '会话', icon: IconChat, subtitle: '当前会话与对话记录' }].concat(views);
+        const systemViews = Array.from(reg.views.values())
+          .filter((item) => item.tab !== false && viewPlacement(item.id) === 'system')
+          .sort((a, b) => a.order - b.order);
+        const nativeItems = useNativeEntries();
+        const moduleNatives = nativeItems.filter((item) => placed['native:' + item.label] === 'modules');
+        const tabs = [{ id: null, title: '会话', icon: IconChat, subtitle: '当前会话与对话记录' }].concat(tabViews);
         const tabKey = tabs.map((item) => (item.id === null ? '__conversation' : item.id)).join('|');
         // Kept outside the component: if the shell ever remounts the top bar while
         // switching panels, the plate still starts from where it was instead of
@@ -1124,6 +1264,29 @@ window.__ModuleLoader__.load({
           );
         };
 
+        // A native sidebar row moved into the module row: same look as a page
+        // tab, but the click is delegated to the original sidebar button.
+        const nativeTab = (item) => h('button', {
+          key: 'native:' + item.label,
+          type: 'button',
+          className: 'wb-view-tab',
+          onClick: () => { try { item.btn.click(); } catch (_error) { /* row went away */ } },
+          style: {
+            position: 'relative', zIndex: 1,
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            height: 31, padding: '0 11px', borderRadius: 7,
+            border: 'none', background: 'transparent',
+            color: 'var(--dsw-alias-label-secondary)',
+            fontWeight: 400, fontSize: 12,
+            cursor: 'pointer', flex: '0 0 auto', transition: 'color .12s',
+          },
+        },
+          item.html
+            ? h('span', { 'aria-hidden': true, style: { display: 'inline-flex', width: 15, height: 15 }, dangerouslySetInnerHTML: { __html: item.html } })
+            : null,
+          h('span', null, item.label),
+        );
+
         return h('div', { ref: rootRef, style: { position: 'fixed', top: 0, left: 0, right: 0, height: TOPBAR_HEIGHT, zIndex: 100, pointerEvents: 'auto', display: 'flex', flexDirection: 'column', background: 'var(--dsw-alias-bg-base)', borderBottom: '1px solid var(--dsw-alias-border-l1)' } },
           h('div', { style: { height: 56, display: 'flex', alignItems: 'center', gap: 10, padding: '0 14px' } },
             h('div', { className: 'wb-topbar-brand', style: { width: 214, flex: '0 0 auto' } }),
@@ -1145,6 +1308,10 @@ window.__ModuleLoader__.load({
               h('span', { className: 'wb-nav-label' }, '工作台'),
             ),
             h(PanelMirror),
+            systemViews.length
+              ? h('div', { style: { display: 'flex', gap: 2, flex: '0 0 auto' } },
+                  systemViews.map((item) => iconBtn(item.id, item.title, item.icon || IconChat)))
+              : null,
             enabled.theme ? h(ThemeSwitcher) : null,
           ),
           h('div', { style: { height: 45, display: 'flex', alignItems: 'center', gap: 8, padding: '0 14px', borderTop: '1px solid var(--dsw-alias-border-l1)' } },
@@ -1166,6 +1333,7 @@ window.__ModuleLoader__.load({
                   })
                 : null,
               tabs.map(viewTab),
+              moduleNatives.map(nativeTab),
             ),
             h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, flex: '0 0 auto' } },
               enabled.balance ? h(BalanceChip, null) : null,

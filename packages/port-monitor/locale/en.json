@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "Workbench · Port Monitor",
+    "title": "Port Monitor",
     "description": "Lists listening TCP ports, their owning processes, and reachability, with one-click jump to HTTP services."
   }
 }
