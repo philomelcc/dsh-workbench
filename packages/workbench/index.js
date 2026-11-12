@@ -15,10 +15,12 @@ function resolveSupervisor() {
   const command = process.env.DSH_RESTART_CMD || '';
   if (command) return { kind: 'command', command };
   if (process.platform !== 'win32') return null;
-  // Windows: a scheduled task. DSH_RESTART_TASK overrides the name, so the
-  // default stays useful for the author's machine without hardcoding it for
-  // everyone else.
-  const task = process.env.DSH_RESTART_TASK || 'philomel-dsh-web';
+  // No default task name: this package ships to other machines, where the
+  // author's scheduled task does not exist. Enable the button by setting
+  // DSH_RESTART_TASK (a Windows scheduled task name) or DSH_RESTART_CMD
+  // (any command that starts the host again).
+  const task = process.env.DSH_RESTART_TASK || '';
+  if (!task) return null;
   try {
     execSync(`schtasks /query /tn ${JSON.stringify(task)}`, { windowsHide: true, stdio: 'ignore' });
     return { kind: 'task', task };

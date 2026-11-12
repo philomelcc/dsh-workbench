@@ -37,7 +37,7 @@ Besides the navigation layers, the shell ships a few **individually switchable**
 |---|---|---|
 | Theme switch | on | dark / light / paper swatches in the top bar |
 | Balance | on | account balance from `remote.account`, click to top up |
-| Restart | on | one-click restart of the web host; **needs an external supervisor** (scheduled task or `DSH_RESTART_CMD`) — without one the button reports it instead of killing the server |
+| Restart | on | one-click restart of the web host; **needs an external supervisor**: set `DSH_RESTART_TASK` (a Windows scheduled task name) or `DSH_RESTART_CMD` (any command). Without one the button reports it instead of killing the server |
 | Running glow | on | flowing glow around the session row while it is working |
 | Turn cost | on | token and cost estimate shown after each turn |
 
