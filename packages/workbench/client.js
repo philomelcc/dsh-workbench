@@ -136,6 +136,66 @@ window.__ModuleLoader__.load({
       return React.useSyncExternalStore(placement.subscribe, placement.getSnapshot);
     }
 
+    // ---------- order store ----------
+    // One order for both bars and for the settings list: every entry is a
+    // `view:<id>` / `native:<label>` key, and the row order on the settings page
+    // is exactly the order the top bar renders in. Registering a module only
+    // decides the default (view.order); dragging a row overrides it.
+    const ORDER_KEY = 'dsh-workbench:order';
+
+    function createOrderStore() {
+      const listeners = new Set();
+      let state = read();
+
+      function read() {
+        try {
+          const raw = localStorage.getItem(ORDER_KEY);
+          const parsed = raw ? JSON.parse(raw) : null;
+          if (Array.isArray(parsed)) return parsed.filter((key) => typeof key === 'string');
+        } catch (_error) { /* storage disabled */ }
+        return [];
+      }
+
+      return {
+        getSnapshot() { return state; },
+        set(list) {
+          state = list.slice();
+          try { localStorage.setItem(ORDER_KEY, JSON.stringify(state)); } catch (_error) { /* storage disabled */ }
+          for (const fn of listeners) fn();
+        },
+        clear() {
+          state = [];
+          try { localStorage.removeItem(ORDER_KEY); } catch (_error) { /* storage disabled */ }
+          for (const fn of listeners) fn();
+        },
+        subscribe(fn) {
+          listeners.add(fn);
+          return () => { listeners.delete(fn); };
+        },
+      };
+    }
+
+    const order = createOrderStore();
+
+    function useOrder() {
+      return React.useSyncExternalStore(order.subscribe, order.getSnapshot);
+    }
+
+    // Sort entries by the user's order. Keys the user has never arranged keep
+    // their natural order and land after the arranged ones.
+    function applyOrder(ordered, items, keyOf) {
+      if (!ordered.length) return items;
+      const rank = new Map();
+      ordered.forEach(function (key, index) { rank.set(key, index); });
+      return items
+        .map(function (item, index) {
+          const key = keyOf(item);
+          return { item: item, rank: rank.has(key) ? rank.get(key) : ordered.length + index };
+        })
+        .sort(function (a, b) { return a.rank - b.rank; })
+        .map(function (entry) { return entry.item; });
+    }
+
     // ---------- shared UI primitives ----------
     function StatusDot(props) {
       const ok = props.ok !== false;
@@ -447,12 +507,115 @@ window.__ModuleLoader__.load({
       const enabled = useFeatures();
       const reg = useRegistry();
       const placed = usePlacement();
+      const ordered = useOrder();
       const nativeItems = useNativeEntries();
       // Only tabbed modules belong here: the shell's own overview and this
       // settings page live in the system bar, not in the module row.
       const views = Array.from(reg.views.values())
         .filter((item) => item.tab !== false)
         .sort((a, b) => a.order - b.order);
+      const viewRows = applyOrder(ordered, views, (item) => 'view:' + item.id);
+      const listRef = React.useRef(null);
+
+      // Drag a placement row to reorder it. Pointer-driven, not HTML5 drag: the
+      // row is lifted out with position:fixed, a placeholder keeps its slot,
+      // the other rows animate out of the way, and the release order is saved.
+      React.useEffect(function () {
+        const list = listRef.current;
+        if (!list) return undefined;
+        let card = null;
+        let placeholder = null;
+        let snapshot = [];
+        let offsetX = 0;
+        let offsetY = 0;
+
+        function liveRows() {
+          return Array.prototype.slice.call(
+            list.querySelectorAll('.wb-placement-row:not(.dragging):not(.placeholder)'),
+          );
+        }
+
+        function start(event) {
+          if (event.button !== 0 || !event.target.closest) return;
+          if (!event.target.closest('.wb-drag-grip')) return;
+          const target = event.target.closest('[data-placement-key]');
+          if (!target) return;
+          event.preventDefault();
+          const rect = target.getBoundingClientRect();
+          offsetX = event.clientX - rect.left;
+          offsetY = event.clientY - rect.top;
+          card = target;
+          card.classList.add('dragging');
+          card.style.left = rect.left + 'px';
+          card.style.top = rect.top + 'px';
+          card.style.width = rect.width + 'px';
+          card.style.height = rect.height + 'px';
+          placeholder = document.createElement('div');
+          placeholder.className = 'wb-placement-row placeholder';
+          placeholder.style.height = rect.height + 'px';
+          list.insertBefore(placeholder, card);
+          snapshot = liveRows().map(function (row) {
+            const r = row.getBoundingClientRect();
+            return { el: row, mid: r.top + r.height / 2 };
+          });
+          document.addEventListener('pointermove', move);
+          document.addEventListener('pointerup', end);
+          document.addEventListener('pointercancel', end);
+        }
+
+        function move(event) {
+          if (!card) return;
+          card.style.left = event.clientX - offsetX + 'px';
+          card.style.top = event.clientY - offsetY + 'px';
+          let after = null;
+          for (let i = 0; i < snapshot.length; i += 1) {
+            if (event.clientY < snapshot[i].mid + 4) { after = snapshot[i].el; break; }
+          }
+          if (placeholder.nextElementSibling === after) return;
+          const others = liveRows();
+          const before = others.map(function (row) {
+            return { el: row, top: row.getBoundingClientRect().top };
+          });
+          if (after) list.insertBefore(placeholder, after);
+          else list.appendChild(placeholder);
+          before.forEach(function (item) {
+            const delta = item.top - item.el.getBoundingClientRect().top;
+            if (!delta) return;
+            if (item.el._wbFlip) item.el._wbFlip.cancel();
+            item.el._wbFlip = item.el.animate(
+              [{ transform: 'translateY(' + delta + 'px)' }, { transform: 'translateY(0px)' }],
+              { duration: 200, easing: 'cubic-bezier(.2,.8,.25,1)' },
+            );
+          });
+        }
+
+        function end() {
+          if (!card) return;
+          placeholder.parentNode.insertBefore(card, placeholder);
+          placeholder.parentNode.removeChild(placeholder);
+          placeholder = null;
+          card.style.left = '';
+          card.style.top = '';
+          card.style.width = '';
+          card.style.height = '';
+          card.classList.remove('dragging');
+          card = null;
+          document.removeEventListener('pointermove', move);
+          document.removeEventListener('pointerup', end);
+          document.removeEventListener('pointercancel', end);
+          order.set(liveRows().map(function (row) {
+            return row.getAttribute('data-placement-key');
+          }));
+        }
+
+        list.addEventListener('pointerdown', start);
+        return function () {
+          list.removeEventListener('pointerdown', start);
+          document.removeEventListener('pointermove', move);
+          document.removeEventListener('pointerup', end);
+          document.removeEventListener('pointercancel', end);
+        };
+      }, []);
 
       function toggleRow(key) {
         const meta = FEATURE_LABELS[key];
@@ -524,8 +687,11 @@ window.__ModuleLoader__.load({
         const value = placed[key] || fallback;
         return h('div', {
           key,
+          className: 'wb-placement-row',
+          'data-placement-key': key,
           style: { display: 'flex', alignItems: 'center', gap: 10, padding: '9px 14px', borderBottom: '1px solid ' + tokens.border1 },
         },
+          h('span', { className: 'wb-drag-grip', title: '拖动调整顺序', 'aria-hidden': true }, '⠿'),
           h('div', { style: { width: 22, height: 22, color: tokens.labelSecondary, flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center' } }, iconNode),
           h('div', { style: { flex: '1 1 auto', minWidth: 0, fontWeight: 550, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, title),
           h('div', { style: { display: 'flex', gap: 4, flex: '0 0 auto' } },
@@ -550,53 +716,57 @@ window.__ModuleLoader__.load({
         );
       }
 
-      return h('div', {
-        style: {
-          padding: '24px 28px', maxWidth: 920, margin: '0 auto', height: '100%',
-          boxSizing: 'border-box', overflowY: 'auto',
-          color: tokens.label, background: tokens.bgBase,
-        },
-      },
-        h('h2', { style: { margin: '0 0 4px', fontSize: 20, fontWeight: 650 } }, '工作台设置'),
-        h('div', { style: { fontSize: 13, color: tokens.labelSecondary, marginBottom: 20 } },
-          '只想要导航分层的话，上面这些都可以关掉，交给别的插件。'),
-        h('div', null,
-          h(SectionHeader, { title: '功能', subtitle: '外壳自带、可以单独关闭的额外功能' }),
-          h(Card, null, FEATURE_KEYS.map(toggleRow)),
+      const nativeRows = applyOrder(ordered, nativeItems, (item) => 'native:' + item.label);
+      const rows = []
+        .concat(nativeRows.map(function (item) {
+          return placementRow(
+            'native:' + item.label,
+            item.label,
+            item.html ? h('span', { style: { display: 'inline-flex', width: 17, height: 17 }, dangerouslySetInnerHTML: { __html: item.html } }) : null,
+            'system',
+          );
+        }))
+        .concat(viewRows.map(function (item) {
+          return placementRow(
+            'view:' + item.id,
+            item.title,
+            item.icon ? h(item.icon, { size: 17, active: false }) : null,
+            'modules',
+          );
+        }));
+
+      return h('div', { className: 'wb-settings-page' },
+        h('div', { className: 'wb-settings-head' },
+          h('h2', { style: { margin: '0 0 4px', fontSize: 20, fontWeight: 650 } }, '工作台设置'),
+          h('div', { style: { fontSize: 13, color: tokens.labelSecondary } },
+            '只想要导航分层的话，功能开关都可以关掉，交给别的插件。'),
         ),
-        h('div', { style: { marginTop: 20 } },
-          h(SectionHeader, { title: '已注册的模块', subtitle: '模块注册的页面；默认出现在第二行，位置可在下面调整' }),
-          h(Card, null,
-            views.length === 0
-              ? h(EmptyState, { text: '还没有模块注册页面。' })
-              : views.map(viewRow),
+        h('div', { className: 'wb-settings-grid' },
+          h('div', null,
+            h(SectionHeader, { title: '功能', subtitle: '外壳自带、可以单独关闭的额外功能' }),
+            h(Card, null, FEATURE_KEYS.map(toggleRow)),
           ),
-        ),
-        h('div', { style: { marginTop: 20 } },
-          h(SectionHeader, { title: '栏位分配', subtitle: '注册成模块只决定默认位置；这里可以把任一条目放进系统栏或模块栏' }),
-          h(Card, null,
-            nativeItems.length === 0 && views.length === 0
-              ? h(EmptyState, { text: '还没有可分配的项目。' })
-              : []
-                .concat(nativeItems.map(function (item) {
-                  return placementRow(
-                    'native:' + item.label,
-                    item.label,
-                    item.html ? h('span', { style: { display: 'inline-flex', width: 17, height: 17 }, dangerouslySetInnerHTML: { __html: item.html } }) : null,
-                    'system',
-                  );
-                }))
-                .concat(views.map(function (item) {
-                  return placementRow(
-                    'view:' + item.id,
-                    item.title,
-                    item.icon ? h(item.icon, { size: 17, active: false }) : null,
-                    'modules',
-                  );
-                })),
+          h('div', null,
+            h(SectionHeader, { title: '已注册的模块', subtitle: '模块注册的页面；默认出现在第二行，位置可在下面调整' }),
+            h(Card, null,
+              viewRows.length === 0
+                ? h(EmptyState, { text: '还没有模块注册页面。' })
+                : viewRows.map(viewRow),
+            ),
           ),
-          h('div', { style: { display: 'flex', justifyContent: 'flex-end', marginTop: 8 } },
-            h(Button, { small: true, variant: 'ghost', onClick: () => placement.clear() }, '恢复默认位置'),
+          h('div', { className: 'wb-settings-wide' },
+            h(SectionHeader, { title: '栏位分配', subtitle: '拖动行首的手柄调整顺序；这个顺序就是系统栏与模块栏的显示顺序' }),
+            h(Card, null,
+              h('div', { ref: listRef, className: 'wb-placement-list' },
+                rows.length === 0
+                  ? h(EmptyState, { text: '还没有可分配的项目。' })
+                  : rows,
+              ),
+            ),
+            h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 } },
+              h(Button, { small: true, variant: 'ghost', onClick: () => { order.clear(); } }, '恢复默认顺序'),
+              h(Button, { small: true, variant: 'ghost', onClick: () => { placement.clear(); order.clear(); } }, '全部恢复默认'),
+            ),
           ),
         ),
       );
@@ -1003,47 +1173,8 @@ window.__ModuleLoader__.load({
       return items;
     }
 
-    function createPanelMirror() {
-      function PanelMirror() {
-        const items = useNativeEntries();
-        const placed = usePlacement();
-        const visible = items.filter(function (item) {
-          return placed['native:' + item.label] === 'system' || placed['native:' + item.label] === undefined;
-        });
-
-        return h('div', { className: 'wb-topbar-icons', style: { display: 'flex', gap: 2, flex: 1, overflow: 'hidden' } },
-          visible.map(function (item, index) {
-            return h('button', {
-              key: item.label + ':' + index,
-              type: 'button',
-              className: 'wb-nav-item',
-              'aria-label': item.label,
-              onClick: function () {
-                try { item.btn.click(); } catch (_error) { /* row went away */ }
-              },
-              style: {
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                gap: 4, height: 34, padding: '0 9px', borderRadius: 8, border: 'none',
-                background: 'transparent', color: 'var(--dsw-alias-label-secondary)',
-                cursor: 'pointer', flex: '0 0 auto', transition: 'background .15s, color .15s',
-              },
-            },
-              h('span', {
-                'aria-hidden': true,
-                style: { display: 'inline-flex', width: 18, height: 18, flex: '0 0 auto' },
-                dangerouslySetInnerHTML: { __html: item.html },
-              }),
-              h('span', { className: 'wb-nav-label' }, item.label),
-            );
-          }),
-        );
-      }
-      return PanelMirror;
-    }
-
     function createTopBar(ctx, balance) {
       const ThemeSwitcher = createThemeSwitcher(ctx);
-      const PanelMirror = createPanelMirror();
 
       function BalanceChip() {
         const snap = React.useSyncExternalStore(balance.subscribe, balance.getSnapshot);
@@ -1114,19 +1245,41 @@ window.__ModuleLoader__.load({
         const panelInfo = typeof usePanelInfo === 'function' ? usePanelInfo((s) => s) : null;
         const activePanelId = panelInfo ? panelInfo.activePanelId : null;
         const placed = usePlacement();
+        const ordered = useOrder();
         const viewPlacement = (id) => {
           const value = placed['view:' + id];
           return value === 'system' || value === 'modules' || value === 'hidden' ? value : 'modules';
         };
-        const tabViews = Array.from(reg.views.values())
-          .filter((item) => item.tab !== false && viewPlacement(item.id) === 'modules')
-          .sort((a, b) => a.order - b.order);
-        const systemViews = Array.from(reg.views.values())
-          .filter((item) => item.tab !== false && viewPlacement(item.id) === 'system')
-          .sort((a, b) => a.order - b.order);
+        const nativePlacement = (item) => {
+          const value = placed['native:' + item.label];
+          return value === 'system' || value === 'modules' || value === 'hidden' ? value : 'system';
+        };
         const nativeItems = useNativeEntries();
-        const moduleNatives = nativeItems.filter((item) => placed['native:' + item.label] === 'modules');
-        const tabs = [{ id: null, title: '会话', icon: IconChat, subtitle: '当前会话与对话记录' }].concat(tabViews);
+        const tabViews = applyOrder(
+          ordered,
+          Array.from(reg.views.values())
+            .filter((item) => item.tab !== false && viewPlacement(item.id) === 'modules')
+            .sort((a, b) => a.order - b.order),
+          (item) => 'view:' + item.id,
+        );
+        // Both bars render as one mixed list sorted by the settings order, so a
+        // native row and a module page can trade places with each other.
+        const systemEntries = applyOrder(ordered, [].concat(
+          nativeItems
+            .filter((item) => nativePlacement(item) === 'system')
+            .map((item) => ({ kind: 'native', key: 'native:' + item.label, label: item.label, html: item.html, btn: item.btn })),
+          Array.from(reg.views.values())
+            .filter((item) => item.tab !== false && viewPlacement(item.id) === 'system')
+            .sort((a, b) => a.order - b.order)
+            .map((item) => ({ kind: 'view', key: 'view:' + item.id, id: item.id, label: item.title, icon: item.icon })),
+        ), (entry) => entry.key);
+        const moduleEntries = applyOrder(ordered, [].concat(
+          tabViews.map((item) => ({ kind: 'view', key: 'view:' + item.id, id: item.id, label: item.title, icon: item.icon, badge: item.badge })),
+          nativeItems
+            .filter((item) => nativePlacement(item) === 'modules')
+            .map((item) => ({ kind: 'native', key: 'native:' + item.label, label: item.label, html: item.html, btn: item.btn })),
+        ), (entry) => entry.key);
+        const tabs = [{ id: null, title: '会话', icon: IconChat, subtitle: '当前会话与对话记录' }];
         const tabKey = tabs.map((item) => (item.id === null ? '__conversation' : item.id)).join('|');
         // Kept outside the component: if the shell ever remounts the top bar while
         // switching panels, the plate still starts from where it was instead of
@@ -1319,11 +1472,26 @@ window.__ModuleLoader__.load({
             // Modules moved to the system bar sit right next to the workbench
             // mark: keeping them before the native mirror means they are not
             // pushed to the far right edge under the account chip.
-            systemViews.length
-              ? h('div', { style: { display: 'flex', gap: 2, flex: '0 0 auto' } },
-                  systemViews.map((item) => iconBtn(item.id, item.title, item.icon || IconChat)))
-              : null,
-            h(PanelMirror),
+            h('div', { className: 'wb-topbar-icons', style: { display: 'flex', gap: 2, flex: '1 1 auto', overflow: 'hidden' } },
+              systemEntries.map((entry) => (entry.kind === 'view'
+                ? iconBtn(entry.id, entry.label, entry.icon || IconChat)
+                : h('button', {
+                    key: entry.key,
+                    type: 'button',
+                    className: 'wb-nav-item',
+                    'aria-label': entry.label,
+                    onClick: () => { try { entry.btn.click(); } catch (_error) { /* row went away */ } },
+                    style: {
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      gap: 4, height: 34, padding: '0 9px', borderRadius: 8, border: 'none',
+                      background: 'transparent', color: 'var(--dsw-alias-label-secondary)',
+                      cursor: 'pointer', flex: '0 0 auto', transition: 'background .15s, color .15s',
+                    },
+                  },
+                    h('span', { 'aria-hidden': true, style: { display: 'inline-flex', width: 18, height: 18, flex: '0 0 auto' }, dangerouslySetInnerHTML: { __html: entry.html } }),
+                    h('span', { className: 'wb-nav-label' }, entry.label),
+                  ))),
+            ),
             enabled.theme ? h(ThemeSwitcher) : null,
           ),
           h('div', { style: { height: 45, display: 'flex', alignItems: 'center', gap: 8, padding: '0 14px', borderTop: '1px solid var(--dsw-alias-border-l1)' } },
@@ -1345,7 +1513,9 @@ window.__ModuleLoader__.load({
                   })
                 : null,
               tabs.map(viewTab),
-              moduleNatives.map(nativeTab),
+              moduleEntries.map((entry) => (entry.kind === 'view'
+                ? viewTab({ id: entry.id, title: entry.label, icon: entry.icon, badge: entry.badge })
+                : nativeTab(entry))),
             ),
             h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, flex: '0 0 auto' } },
               enabled.balance ? h(BalanceChip, null) : null,
@@ -1973,6 +2143,17 @@ div[data-row-key^="session:"]:has(svg[data-state="ongoing"]) svg[data-state="ong
               + '\n.wb-mobile-sidebar-toggle { position: fixed; left: 10px; top: 10px; z-index: 5000; width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--dsw-alias-border-l2); background: var(--dsw-alias-bg-layer-1); color: var(--dsw-alias-label-primary); font-size: 15px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; box-shadow: 0 1px 4px rgba(0,0,0,.12); }'
               + '\n@media (max-width: 767px) { .wb-topbar-brand, [class*="settingsArea"] { display: none !important; } .wb-topbar-icons { margin-left: 42px; } [class*="sidebarCol"] [class*="brand"] { display: none !important; } [class*="sidebarCol"] { padding-top: 44px !important; } [aria-label="收起侧边栏"] { display: none !important; } }'
               + '\n.wb-balance:hover { border-color: #4ade80 !important; background: rgba(74,222,128,.12) !important; }'
+              + '\n.wb-settings-page { padding: 24px 28px; height: 100%; box-sizing: border-box; overflow-y: auto; color: var(--dsw-alias-label-primary); background: var(--dsw-alias-bg-base); }'
+              + '\n.wb-settings-head { max-width: 1280px; margin: 0 auto 20px; }'
+              + '\n.wb-settings-grid { max-width: 1280px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }'
+              + '\n.wb-settings-wide { grid-column: 1 / -1; }'
+              + '\n@media (max-width: 1100px) { .wb-settings-grid { grid-template-columns: minmax(0, 1fr); } }'
+              + '\n.wb-placement-list { display: flex; flex-direction: column; }'
+              + '\n.wb-placement-row { transition: transform .18s ease, box-shadow .18s ease, background .18s ease; }'
+              + '\n.wb-drag-grip { width: 14px; text-align: center; color: var(--dsw-alias-label-secondary); font-size: 12px; letter-spacing: -2px; cursor: grab; user-select: none; flex: 0 0 auto; opacity: .7; }'
+              + '\n.wb-drag-grip:hover { opacity: 1; }'
+              + '\n.wb-placement-row.dragging { position: fixed; z-index: 40; margin: 0; pointer-events: none; cursor: grabbing; transform: scale(1.02); border-radius: 10px; box-shadow: 0 18px 48px rgba(0,0,0,.35); background: var(--dsw-alias-bg-layer-2); transition: none; }'
+              + '\n.wb-placement-row.placeholder { background: color-mix(in srgb, var(--dsw-alias-brand-primary) 8%, transparent) !important; border: 1px dashed color-mix(in srgb, var(--dsw-alias-brand-primary) 45%, transparent) !important; box-shadow: none; }'
               + '\n.wb-nav-item { position: relative; }'
               + '\n.wb-nav-label { max-width: 0; opacity: 0; overflow: hidden; white-space: nowrap; font-size: 12px; transition: max-width .18s ease, opacity .18s ease; }'
               + '\n.wb-nav-item:hover .wb-nav-label { max-width: 110px; opacity: 1; }'
