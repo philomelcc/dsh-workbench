@@ -118,6 +118,11 @@ window.__ModuleLoader__.load({
           try { localStorage.setItem(PLACEMENT_KEY, JSON.stringify(state)); } catch (_error) { /* storage disabled */ }
           for (const fn of listeners) fn();
         },
+        clear() {
+          state = {};
+          try { localStorage.removeItem(PLACEMENT_KEY); } catch (_error) { /* storage disabled */ }
+          for (const fn of listeners) fn();
+        },
         subscribe(fn) {
           listeners.add(fn);
           return () => { listeners.delete(fn); };
@@ -482,7 +487,7 @@ window.__ModuleLoader__.load({
               style: {
                 position: 'absolute', top: 2, left: on ? 20 : 2,
                 width: 16, height: 16, borderRadius: '50%',
-                background: on ? '#fff' : 'var(--dsw-alias-label-secondary)',
+                background: on ? 'var(--dsw-alias-bg-base)' : 'var(--dsw-alias-label-secondary)',
                 transition: 'left .15s',
               },
             }),
@@ -589,6 +594,9 @@ window.__ModuleLoader__.load({
                     'modules',
                   );
                 })),
+          ),
+          h('div', { style: { display: 'flex', justifyContent: 'flex-end', marginTop: 8 } },
+            h(Button, { small: true, variant: 'ghost', onClick: () => placement.clear() }, '恢复默认位置'),
           ),
         ),
       );
@@ -1227,6 +1235,7 @@ window.__ModuleLoader__.load({
         const iconBtn = (id, label, Icon) => h('button', {
           key: id, type: 'button', onClick: () => selectPanel(id),
           className: 'wb-nav-item',
+          'aria-label': label,
           style: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4, height: 34, padding: '0 9px', borderRadius: 8, border: 'none', background: 'transparent', color: 'var(--dsw-alias-label-secondary)', cursor: 'pointer', flex: '0 0 auto', transition: 'background .15s, color .15s' },
         }, h(Icon, { size: 18 }), h('span', { className: 'wb-nav-label' }, label));
 
@@ -1307,11 +1316,14 @@ window.__ModuleLoader__.load({
               h(IconWorkbenchTabs, { size: 18 }),
               h('span', { className: 'wb-nav-label' }, '工作台'),
             ),
-            h(PanelMirror),
+            // Modules moved to the system bar sit right next to the workbench
+            // mark: keeping them before the native mirror means they are not
+            // pushed to the far right edge under the account chip.
             systemViews.length
               ? h('div', { style: { display: 'flex', gap: 2, flex: '0 0 auto' } },
                   systemViews.map((item) => iconBtn(item.id, item.title, item.icon || IconChat)))
               : null,
+            h(PanelMirror),
             enabled.theme ? h(ThemeSwitcher) : null,
           ),
           h('div', { style: { height: 45, display: 'flex', alignItems: 'center', gap: 8, padding: '0 14px', borderTop: '1px solid var(--dsw-alias-border-l1)' } },
@@ -1645,13 +1657,6 @@ window.__ModuleLoader__.load({
 body[data-wb-paper="1"] .dsh-glow-canvas {
   filter: drop-shadow(0 0 2px rgba(198, 156, 96, 0.6));
 }
-/* 隐藏运行中会话左侧的转圈：不依赖 JS 加的 class，React 重建行时也能兜底 */
-div[data-row-key^="session:"]:has(svg[data-state="ongoing"]) svg[data-state="ongoing"],
-.dsh-glow-on svg[data-state="ongoing"],
-.dsh-glow-on [data-state="ongoing"],
-.dsh-glow-on > span:first-child > svg {
-  display: none !important;
-}
 /* paper: every card-like surface follows the paper base; the code surface is
    deeper and overrides the card rule below (same specificity, later wins). */
 body[data-wb-paper="1"] [class*="_tile"],
@@ -1684,6 +1689,19 @@ body[data-wb-paper="1"] [class*="_hoverPath"] {
 }
 `;
 
+    // The native "running" spinner is hidden only while the glow is on. This
+    // block lives in installGlow's own lifetime instead of GLOW_STYLE: the
+    // style tag used to be injected with the plugin, so turning the switch off
+    // left the spinner hidden with nothing drawing in its place.
+    var HIDDEN_SPINNER_STYLE = `
+div[data-row-key^="session:"]:has(svg[data-state="ongoing"]) svg[data-state="ongoing"],
+.dsh-glow-on svg[data-state="ongoing"],
+.dsh-glow-on [data-state="ongoing"],
+.dsh-glow-on > span:first-child > svg {
+  display: none !important;
+}
+`;
+
     function installGlow(ctx) {
       var active = new Map();
       var watched = new Map();
@@ -1692,6 +1710,14 @@ body[data-wb-paper="1"] [class*="_hoverPath"] {
       var observer = null;
       var scheduled = false;
       var disposed = false;
+      var spinnerStyle = null;
+
+      if (typeof document !== 'undefined') {
+        spinnerStyle = document.createElement('style');
+        spinnerStyle.dataset.plugin = 'dsh-workbench:glow-spinner';
+        spinnerStyle.textContent = HIDDEN_SPINNER_STYLE;
+        document.head.append(spinnerStyle);
+      }
 
       function sessionIdOf(row) {
         var key = row.getAttribute("data-row-key");
@@ -1905,6 +1931,7 @@ body[data-wb-paper="1"] [class*="_hoverPath"] {
 
       return function () {
         disposed = true;
+        if (spinnerStyle !== null) spinnerStyle.remove();
         if (frame !== null) cancelAnimationFrame(frame);
         if (observer !== null) observer.disconnect();
         window.removeEventListener("resize", schedule);
