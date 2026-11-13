@@ -105,3 +105,9 @@ scripts/check.mjs          对全部脚本跑 node --check
 ## 许可证
 
 MIT。
+
+## 素材与第三方协议
+
+- 「推理档位滑条」功能移植自 [dsh-codex-effort-slider](https://github.com/Microqian2th/dsh-codex-effort-slider)（**MIT，© Microqian2th**），其版权与协议声明保留在对应源码段。
+- 滑条 max 档闪现的大肥鱼剪影形象来自 **ZipPipe 的「大肥鱼」**，遵循 **CC BY-NC-SA 4.0**：仅限非商业使用，转载/修改需署名原作者并相同方式共享。**不要把这个素材用于任何商业用途**；商用请自行替换。
+- 该剪影为作者原图（B 站 1152×2048 透明底立绘）的轮廓矢量提取，仅在工作台窗口内渲染。
