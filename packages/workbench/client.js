@@ -923,6 +923,11 @@ window.__ModuleLoader__.load({
       '--dsw-alias-brand-primary': '#8a6a45',
       '--dsw-alias-label-primary': '#3b342a',
       '--dsw-alias-label-secondary': '#6f6557',
+      // The HARNESS wordmark badge paints its block with `currentColor` and its
+      // letters with this inverted token. Under paper the block turned dark
+      // (paper label-primary) while the token stayed light-theme dark, so the
+      // badge read as black-on-black.
+      '--dsw-alias-label-primary-inverted': '#f7f3ea',
       '--dsw-alias-state-error-primary': '#a34a3c',
       '--dsw-alias-state-warn-primary': '#a8792c',
       '--dsw-alias-state-success-primary': '#4f7a5a',
