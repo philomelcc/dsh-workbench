@@ -14,6 +14,7 @@
 
 ### 修复
 
+- 纸色补齐整段暖灰阶：任务行、工具调用行、后台任务行等用 `--dsw-static-neutral-bluish-300~800` 的次要文字和图标，纸色下仍是冷灰（`#adb2b8` 那一档），和暖色底不搭。现在 300/310/400/500/600/700/750/800 全部换成同层次的暖灰/纸褐色；用无头浏览器对比 light 与 paper 的 computed color 复扫「首页 / 会话 / 状态监控 / 下载 / UI设计 / 视频剪辑 / 设置页」，只剩主按钮白字这类本来就该固定的白色。
 - 纸色主题刷新后首帧颜色错乱（部分元素是 Host 主题的深色/浅色，要手动切一次主题才正常）：纸色是「本窗口 token 覆盖层」，而主题服务在插件挂载时可能还没就绪，首次覆盖没挂上，页面先按 Host 主题上色、只有 CSS 规则那半生效。现在会等主题服务就绪后重试挂载，并在加载后 3 秒内多次重新确认本窗口调色板。
 - 纸质主题下 logo 的 HARNESS 徽标黑底黑字：徽标底块用 `currentColor`（纸质下变成深褐），字母用 `--dsw-alias-label-primary-inverted`（浅色主题下本来就是深灰），纸色覆盖没盖住这个 token。现在把 `--dsw-alias-label-primary-inverted` 也纳入纸色 token，徽标恢复成深底米白字。
 - **主题切换改成仅本窗口生效**：DSH 把配色偏好存在 Host 设置里（`cordis.patch.yml` 的 `ui-theme.config.preference`），`setTheme()` 写的是全局值，多开窗口会一起变色，无头浏览器测试主题也会把真实窗口带跑。现在工作台不再调用 `setTheme`，只切换本窗口的 `body[data-ds-dark-theme]` 与纸色 token 层，选择存在 `localStorage['dsh-workbench:scheme']`；首次打开采纳 Host 当前配色，之后每个窗口独立。纸色也不再先把全局偏好改成浅色。

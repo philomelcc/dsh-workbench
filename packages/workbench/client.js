@@ -964,6 +964,17 @@ window.__ModuleLoader__.load({
       '--dsw-static-neutral-bluish-100': '#efe9db',
       '--dsw-static-neutral-bluish-150': '#ece6d7',
       '--dsw-static-neutral-bluish-200': '#e7dfcd',
+      // Mid and deep steps carry secondary text and icons (task rows read
+      // #adb2b8 = bluish-400). Paper never covered them, so those rows kept a
+      // cool grey on a warm sheet; warm the whole ramp in the same order.
+      '--dsw-static-neutral-bluish-300': '#d8cfba',
+      '--dsw-static-neutral-bluish-310': '#d3c8b2',
+      '--dsw-static-neutral-bluish-400': '#a49a89',
+      '--dsw-static-neutral-bluish-500': '#8a7f6e',
+      '--dsw-static-neutral-bluish-600': '#7d7262',
+      '--dsw-static-neutral-bluish-700': '#6f6557',
+      '--dsw-static-neutral-bluish-750': '#4f473a',
+      '--dsw-static-neutral-bluish-800': '#3b342a',
     };
 
     // Swatches double as both the current-state indicator and the toggle.
