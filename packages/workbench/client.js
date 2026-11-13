@@ -1003,9 +1003,18 @@ window.__ModuleLoader__.load({
         } catch (_error) { return 'dark'; }
       };
 
+      const getTheme = () => {
+        try {
+          return typeof ctx.get === 'function' ? ctx.get('theme') : ctx.theme;
+        } catch (_error) { return null; }
+      };
+
       let paperDispose = null;
+      let paperRetry = null;
+      let paperAttempts = 0;
       function setPaperLayer(on) {
-        const theme = typeof ctx.get === 'function' ? ctx.get('theme') : ctx.theme;
+        if (paperRetry) { clearTimeout(paperRetry); paperRetry = null; }
+        const theme = getTheme();
         if (on) {
           if (paperDispose) return;
           if (theme && typeof theme.overrideTokens === 'function') {
@@ -1015,14 +1024,27 @@ window.__ModuleLoader__.load({
             });
             try {
               paperDispose = theme.overrideTokens('workbench:paper', modes);
+              paperAttempts = 0;
             } catch (error) {
               console.warn('[workbench] paper override failed', error);
               paperDispose = null;
             }
           }
+          // The theme service can still be loading on a freshly refreshed tab.
+          // Without the override layer only the CSS rules below apply, so the
+          // first paint keeps the Host palette and the page looks half-themed
+          // until the switcher is used. Keep retrying until it exists.
+          if (!paperDispose && paperAttempts < 40) {
+            paperAttempts += 1;
+            paperRetry = setTimeout(() => {
+              paperRetry = null;
+              if (readScheme() === 'paper') applyScheme('paper');
+            }, 120);
+          }
         } else if (paperDispose) {
           try { paperDispose(); } catch (_error) { /* already gone */ }
           paperDispose = null;
+          paperAttempts = 0;
         }
         // Marker for paper-only rules (code surfaces) that tokens cannot reach.
         try {
@@ -1056,6 +1078,16 @@ window.__ModuleLoader__.load({
           const current = readScheme() || scheme;
           if (!readScheme()) writeScheme(current);
           applyScheme(current);
+          // The presenter applies the Host snapshot asynchronously during load;
+          // a handful of idempotent re-asserts keeps this window's palette from
+          // being overwritten in the first frames after a refresh.
+          let ticks = 0;
+          const timer = setInterval(() => {
+            ticks += 1;
+            applyScheme(readScheme() || hostScheme());
+            if (ticks >= 10) clearInterval(timer);
+          }, 300);
+          return () => clearInterval(timer);
         }, []);
 
         // The account block is fixed to the right and changes width (a reconnect

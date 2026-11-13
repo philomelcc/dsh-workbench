@@ -14,6 +14,7 @@
 
 ### 修复
 
+- 纸色主题刷新后首帧颜色错乱（部分元素是 Host 主题的深色/浅色，要手动切一次主题才正常）：纸色是「本窗口 token 覆盖层」，而主题服务在插件挂载时可能还没就绪，首次覆盖没挂上，页面先按 Host 主题上色、只有 CSS 规则那半生效。现在会等主题服务就绪后重试挂载，并在加载后 3 秒内多次重新确认本窗口调色板。
 - 纸质主题下 logo 的 HARNESS 徽标黑底黑字：徽标底块用 `currentColor`（纸质下变成深褐），字母用 `--dsw-alias-label-primary-inverted`（浅色主题下本来就是深灰），纸色覆盖没盖住这个 token。现在把 `--dsw-alias-label-primary-inverted` 也纳入纸色 token，徽标恢复成深底米白字。
 - **主题切换改成仅本窗口生效**：DSH 把配色偏好存在 Host 设置里（`cordis.patch.yml` 的 `ui-theme.config.preference`），`setTheme()` 写的是全局值，多开窗口会一起变色，无头浏览器测试主题也会把真实窗口带跑。现在工作台不再调用 `setTheme`，只切换本窗口的 `body[data-ds-dark-theme]` 与纸色 token 层，选择存在 `localStorage['dsh-workbench:scheme']`；首次打开采纳 Host 当前配色，之后每个窗口独立。纸色也不再先把全局偏好改成浅色。
 - 关闭「进行中光效」后，被它隐藏的 DSH 原生运行转圈不会恢复：隐藏规则原来跟插件一起注入（`GLOW_STYLE` 拼进 `USAGE_STYLE`），现在跟着光效开关的生命周期走，关闭即移除、重新打开再注入。
