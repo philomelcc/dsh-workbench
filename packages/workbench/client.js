@@ -904,12 +904,15 @@ window.__ModuleLoader__.load({
     }
 
     // ---------- theme switcher ----------
-    // `paper` cannot be a persisted preference: DSH only accepts light / dark /
-    // system there, and anything else is dropped when settings resync (that is
-    // why switching models used to fall back to dark). So the paper palette is
-    // an override layer on top of the legal `light` preference, remembered in
-    // localStorage by us.
-    const PAPER_KEY = 'dsh-workbench:paper';
+    // The palette is per window, not a shared preference. DSH keeps the theme in
+    // the Host settings document, so `theme.setTheme()` writes one value that
+    // every open window adopts: switching a color here used to repaint every
+    // tab, and an agent testing palettes in a headless browser repainted the
+    // user's window too. This switches the local DOM instead — the
+    // `data-ds-dark-theme` body attribute plus the paper token layer — and
+    // remembers the choice in localStorage. Other windows keep their own.
+    const SCHEME_KEY = 'dsh-workbench:scheme';
+    const LEGACY_PAPER_KEY = 'dsh-workbench:paper';
     const PAPER_TOKENS = {
       '--dsw-alias-bg-base': '#f7f3ea',
       '--dsw-alias-bg-layer-1': '#f2ece0',
@@ -966,39 +969,51 @@ window.__ModuleLoader__.load({
     ];
 
     function createThemeSwitcher(ctx) {
-      const readPreference = () => {
+      const readScheme = () => {
+        try {
+          const value = window.localStorage.getItem(SCHEME_KEY);
+          if (value === 'dark' || value === 'light' || value === 'paper') return value;
+          // Migrate the old paper-only flag from before the palette was local.
+          if (window.localStorage.getItem(LEGACY_PAPER_KEY) === '1') return 'paper';
+        } catch (_error) { /* storage unavailable */ }
+        return null;
+      };
+      const writeScheme = (value) => {
+        try {
+          window.localStorage.setItem(SCHEME_KEY, value);
+          window.localStorage.removeItem(LEGACY_PAPER_KEY);
+        } catch (_error) { /* storage unavailable */ }
+      };
+      // What the Host currently publishes; used only for the first visit.
+      const hostScheme = () => {
         try {
           const theme = typeof ctx.get === 'function' ? ctx.get('theme') : ctx.theme;
           const snapshot = theme && typeof theme.getTheme === 'function' ? theme.getTheme() : null;
-          return snapshot ? snapshot.preference : null;
-        } catch (_error) {
-          return null;
-        }
-      };
-      const readPaper = () => {
-        try { return window.localStorage.getItem(PAPER_KEY) === '1'; } catch (_error) { return false; }
-      };
-      const writePaper = (on) => {
-        try { window.localStorage.setItem(PAPER_KEY, on ? '1' : '0'); } catch (_error) { /* storage unavailable */ }
+          if (snapshot) {
+            if (snapshot.preference === 'dark') return 'dark';
+            if (snapshot.preference === 'light') return 'light';
+          }
+          const media = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+          return media && media.matches ? 'dark' : 'light';
+        } catch (_error) { return 'dark'; }
       };
 
       let paperDispose = null;
-      function setPaper(on) {
+      function setPaperLayer(on) {
         const theme = typeof ctx.get === 'function' ? ctx.get('theme') : ctx.theme;
-        if (!theme) return;
         if (on) {
           if (paperDispose) return;
-          // Legal persisted preference first, then paint the paper layer on top.
-          try { theme.setTheme('light'); } catch (error) { console.warn('[workbench] setTheme light failed', error); }
-          const modes = {};
-          Object.keys(PAPER_TOKENS).forEach((name) => {
-            modes[name] = { light: PAPER_TOKENS[name], dark: PAPER_TOKENS[name] };
-          });
-          try {
-            paperDispose = typeof theme.overrideTokens === 'function' ? theme.overrideTokens('workbench:paper', modes) : null;
-          } catch (error) {
-            console.warn('[workbench] paper override failed', error);
-            paperDispose = null;
+          if (theme && typeof theme.overrideTokens === 'function') {
+            const modes = {};
+            Object.keys(PAPER_TOKENS).forEach((name) => {
+              modes[name] = { light: PAPER_TOKENS[name], dark: PAPER_TOKENS[name] };
+            });
+            try {
+              paperDispose = theme.overrideTokens('workbench:paper', modes);
+            } catch (error) {
+              console.warn('[workbench] paper override failed', error);
+              paperDispose = null;
+            }
           }
         } else if (paperDispose) {
           try { paperDispose(); } catch (_error) { /* already gone */ }
@@ -1011,10 +1026,32 @@ window.__ModuleLoader__.load({
         } catch (_error) { /* body not ready */ }
       }
 
+      // Paint one palette on this window only: the presenter keys the base
+      // palettes off the body attribute, so flipping it here never touches the
+      // Host preference other windows read.
+      function applyScheme(scheme) {
+        const body = document.body;
+        if (!body) return;
+        const dark = scheme === 'dark';
+        try {
+          if (dark) body.setAttribute('data-ds-dark-theme', '');
+          else body.removeAttribute('data-ds-dark-theme');
+          document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+        } catch (_error) { /* document not ready */ }
+        setPaperLayer(scheme === 'paper');
+      }
+
       function ThemeSwitcher() {
         const boxRef = React.useRef(null);
-        const [paper, setPaperState] = React.useState(readPaper);
-        const [preference, setPreference] = React.useState(readPreference);
+        // First visit adopts whatever the Host publishes; from then on this
+        // window keeps its own palette.
+        const [scheme, setScheme] = React.useState(() => readScheme() || hostScheme());
+
+        React.useEffect(() => {
+          const current = readScheme() || scheme;
+          if (!readScheme()) writeScheme(current);
+          applyScheme(current);
+        }, []);
 
         // The account block is fixed to the right and changes width (a reconnect
         // banner widens it), so park the swatches against its measured left edge
@@ -1056,48 +1093,33 @@ window.__ModuleLoader__.load({
           };
         }, []);
 
-        // Re-apply the saved paper layer after a reload / remount.
-        React.useEffect(() => {
-          if (readPaper()) setPaper(true);
-        }, []);
-
-        // Swatches only re-render on real preference changes; the paper layer is
-        // local state because the theme service does not know about it.
+        // Another window changed the shared preference: the presenter resets the
+        // DOM from that snapshot, so re-assert this window's palette right after.
         React.useEffect(() => {
           if (typeof ctx.on !== 'function') return undefined;
           let off = null;
+          let timer = null;
           try {
             off = ctx.on('theme/change', () => {
-              const next = readPreference();
-              setPreference(next);
-              // Somebody picked a concrete palette in DSH's own settings: drop the layer.
-              if (next && next !== 'light' && paper) {
-                setPaper(false);
-                writePaper(false);
-                setPaperState(false);
-              }
+              if (timer) clearTimeout(timer);
+              timer = setTimeout(() => {
+                timer = null;
+                applyScheme(readScheme() || hostScheme());
+              }, 0);
             });
           } catch (_error) {
             off = null;
           }
-          return () => { if (typeof off === 'function') off(); };
-        }, [paper]);
-
-        const activeId = paper ? 'paper' : (preference === 'dark' ? 'dark' : 'light');
+          return () => {
+            if (timer) clearTimeout(timer);
+            if (typeof off === 'function') off();
+          };
+        }, []);
 
         const choose = (id) => {
-          const theme = typeof ctx.get === 'function' ? ctx.get('theme') : ctx.theme;
-          if (!theme) return;
-          if (id === 'paper') {
-            setPaper(true);
-            writePaper(true);
-            setPaperState(true);
-            return;
-          }
-          setPaper(false);
-          writePaper(false);
-          setPaperState(false);
-          try { theme.setTheme(id); } catch (error) { console.warn('[workbench] setTheme failed', error); }
+          writeScheme(id);
+          setScheme(id);
+          applyScheme(id);
         };
 
         return h('div', {
@@ -1106,10 +1128,10 @@ window.__ModuleLoader__.load({
             position: 'fixed', top: 2, height: 40, zIndex: 301,
             display: 'inline-flex', alignItems: 'center', gap: 8,
           },
-          title: '主题',
+          title: '主题（仅本窗口）',
         },
           THEME_SWATCHES.map((swatch) => {
-            const active = activeId === swatch.id;
+            const active = scheme === swatch.id;
             return h('button', {
               key: swatch.id,
               type: 'button',
