@@ -155,7 +155,7 @@ var module = { exports: {} };
       '.ces-ghost[data-on="1"]{animation:ces-ghost-flash 380ms cubic-bezier(.18,.62,.24,1) both}',
       '@keyframes ces-ghost-flash{0%{opacity:0;transform:translate(-50%,-50%) scale(1.02)}18%{opacity:.30;transform:translate(-50%,-50%) scale(1.06)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.09)}}',
             '.ces-knob{transition:transform 90ms cubic-bezier(.2,.7,.3,1), box-shadow 120ms ease}',
-      '.ces-track[data-dragging="1"] .ces-knob{transform:scale(.86);box-shadow:0 2px 10px rgba(0,0,0,.45),0 0 0 3px rgba(120,150,255,.45)}',
+      '.ces-track[data-dragging="1"] .ces-knob{transform:scale(.86);box-shadow:0 2px 10px rgba(0,0,0,.45),0 0 0 3px rgba(140,185,255,.85),0 0 0 6px rgba(120,160,255,.28)}',
       '.ces-track[data-shake="1"] .ces-knob{animation:ces-knob-shake 70ms ease-in-out infinite}',
       '@keyframes ces-knob-shake{0%,100%{transform:translateX(0)}25%{transform:translateX(calc(var(--ces-shake,0px) * -1))}75%{transform:translateX(var(--ces-shake,0px))}}',
       '.ces-spark{position:fixed;width:4px;height:4px;border-radius:50%;background:#cfe3ff;box-shadow:0 0 6px #9ec8ff;pointer-events:none;z-index:2147482998;animation:ces-spark 560ms ease-out forwards}',
