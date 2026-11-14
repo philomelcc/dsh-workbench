@@ -150,11 +150,11 @@ var module = { exports: {} };
     // 矢量为作者原图（B站 1152x2048 透明底立绘）轮廓提取，随主题染色。
     CSS = CSS + "\n" + [
       '[data-ces-part="track"]{position:relative;overflow:visible}',
-      '.ces-ghost{position:fixed;width:132px;height:148px;transform:translate(-50%,-50%);pointer-events:none;opacity:0;z-index:2147482000;filter:drop-shadow(0 0 10px rgba(140,180,255,.45))}',
+      '.ces-ghost{position:fixed;transform:translate(-50%,-50%);pointer-events:none;opacity:0;filter:blur(2px)}',
       '.ces-ghost svg{width:100%;height:100%;display:block;fill:var(--ces-ghost-color,#cfe3ff);fill-rule:evenodd}',
       '.ces-ghost[data-on="1"]{animation:ces-ghost-flash 380ms cubic-bezier(.18,.62,.24,1) both}',
-      '@keyframes ces-ghost-flash{0%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}22%{opacity:.55;transform:translate(-50%,-50%) scale(1.09)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.13)}}',
-      'body[data-wb-paper] .ces-ghost{--ces-ghost-color:#8a6a45;filter:drop-shadow(0 0 10px rgba(138,106,69,.5))}'].join("\n");
+      '@keyframes ces-ghost-flash{0%{opacity:0;transform:translate(-50%,-50%) scale(1.02)}18%{opacity:.30;transform:translate(-50%,-50%) scale(1.06)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.09)}}',
+      'body[data-wb-paper] .ces-ghost{--ces-ghost-color:#8a6a45}',].join("\n");
 
     function installStyles() {
       try {
@@ -766,6 +766,40 @@ var module = { exports: {} };
      *   count —— 档位数
      * 规则：pos ≥ cur + 1/3 才向上（拖得快可一次跨多格）；pos ≤ cur − 2/3 才向下；否则不动。
      */
+    /**
+     * 档位门槛（detent gate）：把指针位置映射成滑条目标位置。
+     * 每个档位边界前后各有一段"阻力带"，指针要在带内多走一段才跨得过去；
+     * 门槛随档位递增，**最高档最大**（超频前最后一道坎）。
+     */
+    var DETENT_GATES = [0.026, 0.038, 0.062, 0.085, 0.11];
+    var DETENT_GATE_MAX = 0.1;
+
+    function detentGate(i, count) {
+      var g = DETENT_GATES[Math.min(DETENT_GATES.length - 1, i - 1)];
+      if (i === count - 1) g = Math.max(g, DETENT_GATE_MAX);
+      return g;
+    }
+
+    function detentPct(pct, count) {
+      if (!(count > 1)) return pct;
+      var n = count - 1;
+      var shift = 0;
+      for (var i = 1; i <= n; i += 1) {
+        // 档位切换边界在相邻档位中心之间：(i - 0.5) / (count - 1)
+        var b = (i - 0.5) / n;
+        var g = detentGate(i, count);
+        var lo = b - g;
+        var hi = b + g;
+        if (pct < lo) break;
+        if (pct <= hi) {
+          var t = (pct - lo) / (2 * g);
+          return Math.max(0, Math.min(1, lo - shift + g * t * t));
+        }
+        shift += g;
+      }
+      return Math.max(0, Math.min(1, pct - shift));
+    }
+
     function detentTargetIndex(pos, cur, count, third) {
       if (count <= 1) return 0;
       var th = (typeof third === "number" && third > 0 && third < 0.5) ? third : 1 / 3;
@@ -2281,8 +2315,10 @@ var module = { exports: {} };
       /** 拖动落点：只改 target（**不碰 x/v/a**），并按指针速度更新前馈。 */
       function moveTo(clientX) {
         if (levelCount === 0) return;
-        var pct = pctAt(clientX);
-        if (pct === null) return;
+        var rawPct = pctAt(clientX);
+        if (rawPct === null) return;
+        // 档位门槛：非「快速动画」模式下，跨档要额外走一段（最后一档门槛最大）
+        var pct = motionMode() === "fast" ? rawPct : detentPct(rawPct, levelCount);
         var m = ensureMotion();
         // 指针速度（EMA 平滑防抖）：用于前馈 + 松手外推。
         // ⚠️ 时间基准必须用**上次 pointermove 的时刻**（lastPointerAtRef），
@@ -2778,14 +2814,23 @@ var module = { exports: {} };
     function flashEffortGhost(track) {
       try {
         if (typeof document === 'undefined' || !document.body) return;
-        const r = track.getBoundingClientRect();
+        // 挂在整个模型菜单面板后面：比面板大一圈、z-index 低一层，从四周探出来
+        const menu = track.closest('[role="menu"]') || track.closest('[class*="menu"]') || null;
+        const box = (menu || track).getBoundingClientRect();
+        const width = Math.round(Math.max(360, box.width * 1.7));
+        const height = Math.round(width * 1.12);
+        const menuZ = menu ? parseInt(getComputedStyle(menu).zIndex, 10) : NaN;
+        const zIndex = Number.isFinite(menuZ) && menuZ > 0 ? menuZ - 1 : 2147482999;
         const el = document.createElement('div');
         el.className = 'ces-ghost';
         el.setAttribute('data-ces-part', 'ghost');
         el.setAttribute('data-on', '1');
         el.setAttribute('aria-hidden', 'true');
-        el.style.left = (r.left + r.width / 2) + 'px';
-        el.style.top = (r.top + r.height / 2) + 'px';
+        el.style.width = width + 'px';
+        el.style.height = height + 'px';
+        el.style.zIndex = String(zIndex);
+        el.style.left = (box.left + box.width / 2) + 'px';
+        el.style.top = (box.top + box.height / 2) + 'px';
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.setAttribute('viewBox', GHOST_VIEWBOX);
         svg.setAttribute('preserveAspectRatio', 'xMidYMax meet');
