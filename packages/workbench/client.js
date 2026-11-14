@@ -123,7 +123,7 @@ var module = { exports: {} };
       ".ces-star{position:absolute;left:0;right:0;height:3px;margin-top:-1.5px;pointer-events:none;animation-name:ces-star-sweep;animation-timing-function:linear;animation-iteration-count:infinite}",
       ".ces-star__dot{position:absolute;left:100%;top:0;width:3px;height:3px;margin-left:-1.5px;border-radius:50%;background:#fff;box-shadow:0 0 4px rgba(255,255,255,.85);opacity:var(--ces-b,1);transform:scale(var(--ces-b,1))}",
       "@keyframes ces-star-sweep{0%{transform:translate3d(0,0,0);opacity:0}6%{opacity:1}94%{opacity:1}100%{transform:translate3d(-100%,0,0);opacity:0}}",
-      ".ces-energy__sweep{position:absolute;inset:0;background:linear-gradient(100deg,transparent 18%,rgba(255,255,255,.30) 50%,transparent 82%);transform:translateX(100%);animation:ces-sweep 2.4s linear infinite}",
+      ".ces-energy__sweep{position:absolute;inset:0;background:linear-gradient(100deg,transparent 18%,rgba(255,255,255,.30) 50%,transparent 82%);transform:translateX(100%);animation:ces-sweep var(--ces-sweep-dur, 2.4s) linear infinite}",
       "@keyframes ces-sweep{0%{transform:translateX(100%)}100%{transform:translateX(-100%)}}",
       "body[data-ds-dark-theme] .ces-star__dot{background:#f5f3ff;box-shadow:0 0 5px rgba(216,180,254,.95)}",
       /* 系统要求「减少动态效果」时**放缓**而不是冻住：收起扫光。
@@ -159,6 +159,8 @@ var module = { exports: {} };
       '.ces-spark{position:fixed;width:4px;height:4px;border-radius:50%;background:#cfe3ff;box-shadow:0 0 6px #9ec8ff;pointer-events:none;z-index:2147482998;animation:ces-spark 560ms ease-out forwards}',
       '@keyframes ces-spark{0%{transform:translate(-50%,-50%) scale(1);opacity:.95}100%{transform:translate(calc(-50% + var(--ces-dx,0px)), calc(-50% + var(--ces-dy,0px))) scale(.15);opacity:0}}',
       'body[data-wb-paper] .ces-spark{background:#8a6a45;box-shadow:0 0 6px #a8875c}',
+      '@keyframes ces-roll-up{0%{transform:translateY(0)}100%{transform:translateY(-105%)}}',
+      '@keyframes ces-roll-in{0%{transform:translateY(105%)}100%{transform:translateY(0)}}',
       '.ces-roll-out{pointer-events:none;animation:ces-value-roll-out 240ms ease-in forwards}',
       '@keyframes ces-value-roll-out{0%{transform:translateY(0);opacity:1}100%{transform:translateY(-11px);opacity:0}}',
       '.ces-roll{display:inline-block;animation:ces-value-roll 260ms cubic-bezier(.2,.7,.3,1)}',
@@ -800,25 +802,32 @@ var module = { exports: {} };
      *   · 指针位置 ≥ 2：才真正冲进 max（配合粒子 + 虚影）。
      * 返回 { target, shake }，shake 单位 px。
      */
-    function stagedTarget(pct, count) {
+    /**
+     * 拖动映射（非快速模式）：
+     *   · 带外正常跟手（旋钮吸附鼠标）；
+     *   · 每个档位边界前后有磁吸带，指针在带内时旋钮钉在带入口，要多走一段才能脱开
+     *     （Off → Low 也有，不只高档）；
+     *   · 超过 (n-1)/n 后钉在最高档前一格，指针走过 1 之后开始轻微颤动（最多 2px），
+     *     大约到「2」的位置才冲进 Max。
+     * 返回 { target, shake }（shake 单位 px）。
+     */
+    function gatedTarget(pointerPct, count) {
       var n = count - 1;
-      if (!(n > 0)) return { target: pct < 0 ? 0 : (pct > 1 ? 1 : pct), shake: 0 };
-      var step = 1 / n;
-      if (pct <= step) {
-        var p0 = pct < 0 ? 0 : pct;
-        return { target: p0, shake: 0 };
+      var q = pointerPct < 0 ? 0 : pointerPct;
+      if (!(n > 0)) return { target: q > 1 ? 1 : q, shake: 0 };
+      var lastLevel = (n - 1) / n;
+      if (q >= lastLevel) {
+        if (q >= 2) return { target: 1, shake: 0 };
+        var shake = q >= 1 ? Math.min(2, (q - 1) * 2) : 0;
+        return { target: lastLevel, shake: shake };
       }
-      if (pct >= 2) return { target: 1, shake: 0 };
-      if (pct >= 1) {
-        // 蓄力段：钉在最高档前一格，轻微颤动（更弱：最多 2px）
-        return { target: (n - 1) * step, shake: Math.min(2, (pct - 1) * 2) };
+      for (var i = 1; i < n; i += 1) {
+        var b = i / n;
+        var g = detentGate(i, count);
+        if (q < b - g) break;
+        if (q <= b + g) return { target: b - g, shake: 0 };
       }
-      var idx = Math.floor(pct * n);
-      if (idx >= n) idx = n - 1;
-      // 每一档都「卡住」：段内滑条留在格点上不动，越接近段末越像被顶住（微颤最多 1.6px）
-      var frac = (pct - idx * step) / step;
-      var holdShake = frac > 0.55 ? Math.min(1.6, (frac - 0.55) * 5) : 0;
-      return { target: idx * step, shake: holdShake };
+      return { target: q > 1 ? 1 : q, shake: 0 };
     }
 
     function detentPct(pct, count) {
@@ -2355,9 +2364,9 @@ var module = { exports: {} };
         if (motionMode() === "fast") {
           pct = Math.max(0, Math.min(1, rawPct));
         } else {
-          var staged = stagedTarget(rawPct, levelCount);
-          pct = staged.target;
-          shakePx = staged.shake;
+          var gated = gatedTarget(rawPct, levelCount);
+          pct = gated.target;
+          shakePx = gated.shake;
         }
         try {
           var shakeTrack = typeof document !== "undefined" ? document.querySelector('[data-ces-part="track"]') : null;
@@ -2645,6 +2654,12 @@ var module = { exports: {} };
       }, [shownPct]);
 
       var atMax = levelCount > 1 && shownIndex === levelCount - 1;
+      // 流光速度：High 档大幅放慢（蓄势感），Max 档加快（超频）。
+      var sweepDur = "2.4s";
+      if (levelCount > 1) {
+        if (shownIndex === levelCount - 1) sweepDur = "1.1s";
+        else if (shownIndex === levelCount - 2) sweepDur = "7s";
+      }
       var ui = null;
       if (host !== null && host.container && levelCount > 0) {
         ui = ReactDOM.createPortal(
@@ -2657,7 +2672,7 @@ var module = { exports: {} };
               "data-motion": effectiveReducedMotion ? "concise" : "full",
               "data-reached-ticks": readSettings().reachedTicks,
               "data-busy": busy ? "1" : "0",
-              style: { "--ces-energy": String(energy) },
+              style: { "--ces-energy": String(energy), "--ces-sweep-dur": sweepDur },
             },
             React.createElement(
               "div",
@@ -2876,6 +2891,10 @@ var module = { exports: {} };
         el.setAttribute('aria-hidden', 'true');
         el.style.width = width + 'px';
         el.style.height = height + 'px';
+        if (menu) {
+          const menuZ = parseInt(getComputedStyle(menu).zIndex, 10);
+          el.style.zIndex = String(Number.isFinite(menuZ) && menuZ > 1 ? menuZ - 1 : 2147482999);
+        }
         // 按视口钳位：旧会话输入框贴在屏幕底部，菜单下方空间不够时把虚影整体上移，
         // 保证整条剪影（包括尾巴）都在视口里。
         const vw = (document.documentElement && document.documentElement.clientWidth) || window.innerWidth;
@@ -2964,21 +2983,30 @@ var module = { exports: {} };
               const text = String(valueEl.textContent || '').trim();
               if (lastValueText !== null && text !== lastValueText) {
                 try {
-                  // 旧文字留在原位往上滑出，新文字从下方滚入——两块文字一起滚
                   const cs = getComputedStyle(valueEl);
                   const pr = valueEl.getBoundingClientRect();
-                  const oldEl = document.createElement('span');
-                  oldEl.textContent = lastValueText;
-                  oldEl.className = 'ces-roll-out';
-                  oldEl.style.cssText = 'position:fixed;pointer-events:none;left:' + pr.left + 'px;top:' + pr.top + 'px;'
-                    + 'color:' + cs.color + ';font-size:' + cs.fontSize + ';font-weight:' + cs.fontWeight
-                    + ';font-family:' + cs.fontFamily + ';line-height:' + cs.lineHeight + ';z-index:2147482997;';
-                  document.body.appendChild(oldEl);
-                  window.setTimeout(() => { if (oldEl.parentNode) oldEl.parentNode.removeChild(oldEl); }, 280);
-                } catch (cloneError) { /* 动效失败不影响切档 */ }
-                valueEl.classList.remove('ces-roll');
-                void valueEl.offsetWidth;
-                valueEl.classList.add('ces-roll');
+                  const wrap = document.createElement('span');
+                  wrap.className = 'ces-roll-wrap';
+                  wrap.style.cssText = 'position:fixed;pointer-events:none;overflow:hidden;z-index:2147482997;'
+                    + 'left:' + pr.left + 'px;top:' + pr.top + 'px;width:' + pr.width + 'px;height:' + pr.height + 'px;';
+                  const mk = (txt, anim) => {
+                    const s = document.createElement('span');
+                    s.textContent = txt;
+                    s.style.cssText = 'position:absolute;left:0;top:0;width:100%;height:100%;display:flex;align-items:center;justify-content:flex-end;'
+                      + 'color:' + cs.color + ';font-size:' + cs.fontSize + ';font-weight:' + cs.fontWeight
+                      + ';font-family:' + cs.fontFamily + ';line-height:' + cs.lineHeight + ';white-space:nowrap;'
+                      + 'animation:' + anim + ' 230ms cubic-bezier(.2,.7,.3,1) forwards;';
+                    return s;
+                  };
+                  wrap.appendChild(mk(lastValueText, 'ces-roll-up'));
+                  wrap.appendChild(mk(text, 'ces-roll-in'));
+                  document.body.appendChild(wrap);
+                  valueEl.style.visibility = 'hidden';
+                  window.setTimeout(() => {
+                    if (wrap.parentNode) wrap.parentNode.removeChild(wrap);
+                    valueEl.style.visibility = '';
+                  }, 260);
+                } catch (rollError) { /* 动效失败不影响切档 */ }
               }
               lastValueText = text;
             }
