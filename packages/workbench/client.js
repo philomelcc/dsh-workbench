@@ -160,7 +160,7 @@ var module = { exports: {} };
       '@keyframes ces-spark{0%{transform:translate(-50%,-50%) scale(1);opacity:.95}100%{transform:translate(calc(-50% + var(--ces-dx,0px)), calc(-50% + var(--ces-dy,0px))) scale(.15);opacity:0}}',
       'body[data-wb-paper] .ces-spark{background:#8a6a45;box-shadow:0 0 6px #a8875c}',
       '.ces-dragging, .ces-dragging *{cursor:none !important}',
-      '.ces-track[data-dragging="1"] .ces-knob::after{content:"";position:absolute;left:50%;top:50%;width:13px;height:18px;margin:-2px 0 0 -3px;background:url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'13\' height=\'18\' viewBox=\'0 0 13 18\'%3E%3Cpath d=\'M1 1l11 8.5-4.8.8 2.6 5.4-2 1-2.6-5.4L1 15z\' fill=\'white\' stroke=\'black\' stroke-width=\'1.4\' stroke-linejoin=\'round\'/%3E%3C/svg%3E") no-repeat center/contain;pointer-events:none}',
+      '.ces-track[data-dragging="1"] .ces-knob::after{content:"";position:absolute;left:50%;top:50%;width:16px;height:23px;margin:-1px 0 0 -1px;background:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2215%22 height=%2222%22 viewBox=%220 0 15 22%22%3E%3Cpath d=%22M1.4 1.2v17.6l4.1-4.2 3 6.6 2.7-1.2-3-6.5h5.2z%22 fill=%22white%22 stroke=%22%23131313%22 stroke-width=%221.5%22 stroke-linejoin=%22round%22/%3E%3C/svg%3E") no-repeat center/contain;filter:drop-shadow(0 1px 1.5px rgba(0,0,0,.45));pointer-events:none}',
       '@keyframes ces-roll-up{0%{transform:translateY(0)}100%{transform:translateY(-105%)}}',
       '@keyframes ces-roll-in{0%{transform:translateY(105%)}100%{transform:translateY(0)}}',
       '.ces-roll-out{pointer-events:none;animation:ces-value-roll-out 240ms ease-in forwards}',
