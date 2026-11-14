@@ -3,6 +3,12 @@
 按包分节记录变更，版本号是各自包的 semver（外壳在本仓库，模块在各自仓库）。
 0.1.8 及更早的版本没有留档，可查 `git log` 或 npm 上对应版本的 tarball。
 
+## @philomelcc/dsh-workbench 0.1.13
+
+### 文档
+
+- `packages/workbench/README.md`（也就是 npm 包页面）补上 0.1.11/0.1.12 的变化摘要，以及**素材与第三方协议**段：滑条移植来源（MIT © Microqian2th）+ 大肥鱼剪影（ZipZipPipe，CC BY-NC-SA 4.0，非商业）——包里内联了该剪影的矢量，必须在包页面声明。
+
 ## @philomelcc/dsh-workbench 0.1.12
 
 ### 修复
