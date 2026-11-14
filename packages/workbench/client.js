@@ -159,7 +159,7 @@ var module = { exports: {} };
       '.ces-spark{position:fixed;width:4px;height:4px;border-radius:50%;background:#cfe3ff;box-shadow:0 0 6px #9ec8ff;pointer-events:none;z-index:2147482998;animation:ces-spark 560ms ease-out forwards}',
       '@keyframes ces-spark{0%{transform:translate(-50%,-50%) scale(1);opacity:.95}100%{transform:translate(calc(-50% + var(--ces-dx,0px)), calc(-50% + var(--ces-dy,0px))) scale(.15);opacity:0}}',
       'body[data-wb-paper] .ces-spark{background:#8a6a45;box-shadow:0 0 6px #a8875c}',
-      '.ces-dragging, .ces-dragging *{cursor:none !important}',
+      '.ces-dragging, .ces-dragging *{cursor:grabbing !important}',
       '@keyframes ces-roll-up{0%{transform:translateY(0)}100%{transform:translateY(-105%)}}',
       '@keyframes ces-roll-in{0%{transform:translateY(105%)}100%{transform:translateY(0)}}',
       '.ces-roll-out{pointer-events:none;animation:ces-value-roll-out 240ms ease-in forwards}',
@@ -596,6 +596,8 @@ var module = { exports: {} };
 
     /** 安装全局交互。分两段：① 每个模块实例都要挂"清缓存"；② 全局交互只装一套。 */
     function installSettingsUi() {
+      // 工作台已接管设置（功能开关），不再注入原仓库的右键设置面板
+      return;
       if (typeof document === "undefined" || !document.addEventListener) return;
       settingsUiState.installed = true;
 
@@ -814,10 +816,10 @@ var module = { exports: {} };
      *   → 167–267 不动 → 267–367 颤动 → 367–368 冲进 Max。）
      * max 段后半开始颤动（最多 2px）。
      */
-    var STAGE_TRAVEL_RATE = 2;
+    var STAGE_TRAVEL_RATE = 4;
 
     function stageRateFor(i, n) {
-      if (i === n - 1) return 3;
+      if (i === n - 1) return 6;
       if (i === 0) return 1;
       return 1.5;
     }
@@ -2188,6 +2190,8 @@ var module = { exports: {} };
       var frameRef = React.useRef(null);
       var lastTsRef = React.useRef(0);
       var lastPtrPctRef = React.useRef(null);
+      /** 上一次的**指针原始位置**（未过卡扣映射），用来判断拖动方向（往回拖不震）。 */
+      var rawPtrRef = React.useRef(null);
       /**
        * **上次 pointermove 的时刻**。单独用一个 ref，不能复用 lastTsRef ——
        * 后者是"上一帧的时刻"（帧循环每帧都改它），拿它算指针速度会得到错的 dt；
@@ -2386,7 +2390,12 @@ var module = { exports: {} };
           var staged = stagedTarget(rawPct, levelCount);
           pct = staged.target;
           shakePx = staged.shake;
+          // 只朝 Max 推进时颤动；往回拖（例如从 Max 拖回 High）不震
+          if (shakePx > 0 && rawPtrRef.current !== null && rawPct < rawPtrRef.current) {
+            shakePx = 0;
+          }
         }
+        rawPtrRef.current = rawPct;
         try {
           var shakeTrack = typeof document !== "undefined" ? document.querySelector('[data-ces-part="track"]') : null;
           if (shakeTrack) {
@@ -2680,8 +2689,8 @@ var module = { exports: {} };
       // 流光速度：High 档大幅放慢（蓄势感），Max 档加快（超频）。
       var sweepDur = "2.4s";
       if (levelCount > 1) {
-        if (shownIndex === levelCount - 1) sweepDur = "0.8s";
-        else if (shownIndex === levelCount - 2) sweepDur = "12s";
+        if (shownIndex === levelCount - 1) sweepDur = "0.5s";
+        else if (shownIndex === levelCount - 2) sweepDur = "20s";
       }
       var ui = null;
       if (host !== null && host.container && levelCount > 0) {
