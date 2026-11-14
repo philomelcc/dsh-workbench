@@ -159,7 +159,8 @@ var module = { exports: {} };
       '.ces-spark{position:fixed;width:4px;height:4px;border-radius:50%;background:#cfe3ff;box-shadow:0 0 6px #9ec8ff;pointer-events:none;z-index:2147482998;animation:ces-spark 560ms ease-out forwards}',
       '@keyframes ces-spark{0%{transform:translate(-50%,-50%) scale(1);opacity:.95}100%{transform:translate(calc(-50% + var(--ces-dx,0px)), calc(-50% + var(--ces-dy,0px))) scale(.15);opacity:0}}',
       'body[data-wb-paper] .ces-spark{background:#8a6a45;box-shadow:0 0 6px #a8875c}',
-      '.ces-dragging, .ces-dragging *{cursor:grabbing !important}',
+      '.ces-dragging, .ces-dragging *{cursor:none !important}',
+      '.ces-track[data-dragging="1"] .ces-knob::after{content:"";position:absolute;left:50%;top:50%;width:13px;height:18px;margin:-2px 0 0 -3px;background:url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'13\' height=\'18\' viewBox=\'0 0 13 18\'%3E%3Cpath d=\'M1 1l11 8.5-4.8.8 2.6 5.4-2 1-2.6-5.4L1 15z\' fill=\'white\' stroke=\'black\' stroke-width=\'1.4\' stroke-linejoin=\'round\'/%3E%3C/svg%3E") no-repeat center/contain;pointer-events:none}',
       '@keyframes ces-roll-up{0%{transform:translateY(0)}100%{transform:translateY(-105%)}}',
       '@keyframes ces-roll-in{0%{transform:translateY(105%)}100%{transform:translateY(0)}}',
       '.ces-roll-out{pointer-events:none;animation:ces-value-roll-out 240ms ease-in forwards}',
@@ -816,10 +817,10 @@ var module = { exports: {} };
      *   → 167–267 不动 → 267–367 颤动 → 367–368 冲进 Max。）
      * max 段后半开始颤动（最多 2px）。
      */
-    var STAGE_TRAVEL_RATE = 4;
+    var STAGE_TRAVEL_RATE = 3;
 
     function stageRateFor(i, n) {
-      if (i === n - 1) return 6;
+      if (i === n - 1) return 4.5;
       if (i === 0) return 1;
       return 1.5;
     }
@@ -2465,6 +2466,10 @@ var module = { exports: {} };
         if (!draggingRef.current) return;
         draggingRef.current = false;
         try { document.body.classList.remove('ces-dragging'); } catch (_dragError) { /* ignore */ }
+        try {
+          const dragTrack = document.querySelector('[data-ces-part="track"]');
+          if (dragTrack) dragTrack.removeAttribute("data-dragging");
+        } catch (_dragError2) { /* ignore */ }
         var m = ensureMotion();
         // ⚠️ 这里**必须**读 ref，不能读闭包变量：
         //    窗口级 pointerup 安全网是"挂载时绑定一次"的长寿闭包，直接读闭包里的
@@ -2519,6 +2524,9 @@ var module = { exports: {} };
         draggingRef.current = true;
         buttonDownRef.current = true;
         try { document.body.classList.add('ces-dragging'); } catch (_dragError) { /* 光标隐藏失败无妨 */ }
+        try {
+          if (event.currentTarget && event.currentTarget.setAttribute) event.currentTarget.setAttribute("data-dragging", "1");
+        } catch (_dragError2) { /* ignore */ }
         // 起手时对齐"已写回档位"，避免刚按下就写一次无意义的档位
         lastCommittedIndexRef.current = -1;
         // 快速动画：按下即把"当前格"对齐到指针所在格（点击远处 = 直接跳到那一档）。
@@ -2689,7 +2697,7 @@ var module = { exports: {} };
       // 流光速度：High 档大幅放慢（蓄势感），Max 档加快（超频）。
       var sweepDur = "2.4s";
       if (levelCount > 1) {
-        if (shownIndex === levelCount - 1) sweepDur = "0.5s";
+        if (shownIndex === levelCount - 1) sweepDur = "0.3s";
         else if (shownIndex === levelCount - 2) sweepDur = "20s";
       }
       var ui = null;
