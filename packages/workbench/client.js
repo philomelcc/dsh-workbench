@@ -150,11 +150,18 @@ var module = { exports: {} };
     // 矢量为作者原图（B站 1152x2048 透明底立绘）轮廓提取，随主题染色。
     CSS = CSS + "\n" + [
       '[data-ces-part="track"]{position:relative;overflow:visible}',
-      '.ces-ghost{position:fixed;transform:translate(-50%,-50%);pointer-events:none;opacity:0;filter:blur(2px)}',
+      '.ces-ghost{position:fixed;transform:translate(-50%,-50%);pointer-events:none;opacity:0}',
       '.ces-ghost svg{width:100%;height:100%;display:block;fill:var(--ces-ghost-color,#cfe3ff);fill-rule:evenodd}',
       '.ces-ghost[data-on="1"]{animation:ces-ghost-flash 380ms cubic-bezier(.18,.62,.24,1) both}',
       '@keyframes ces-ghost-flash{0%{opacity:0;transform:translate(-50%,-50%) scale(1.02)}18%{opacity:.30;transform:translate(-50%,-50%) scale(1.06)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.09)}}',
-      'body[data-wb-paper] .ces-ghost{--ces-ghost-color:#8a6a45}',].join("\n");
+            '.ces-track[data-shake="1"] .ces-knob{animation:ces-knob-shake 70ms ease-in-out infinite}',
+      '@keyframes ces-knob-shake{0%,100%{transform:translateX(0)}25%{transform:translateX(calc(var(--ces-shake,0px) * -1))}75%{transform:translateX(var(--ces-shake,0px))}}',
+      '.ces-spark{position:fixed;width:4px;height:4px;border-radius:50%;background:#cfe3ff;box-shadow:0 0 6px #9ec8ff;pointer-events:none;z-index:2147482998;animation:ces-spark 560ms ease-out forwards}',
+      '@keyframes ces-spark{0%{transform:translate(-50%,-50%) scale(1);opacity:.95}100%{transform:translate(calc(-50% + var(--ces-dx,0px)), calc(-50% + var(--ces-dy,0px))) scale(.15);opacity:0}}',
+      'body[data-wb-paper] .ces-spark{background:#8a6a45;box-shadow:0 0 6px #a8875c}',
+      '.ces-roll{display:inline-block;animation:ces-value-roll 260ms cubic-bezier(.2,.7,.3,1)}',
+      '@keyframes ces-value-roll{0%{transform:translateY(9px);opacity:0}45%{transform:translateY(0);opacity:1}100%{transform:translateY(0);opacity:1}}',
+'body[data-wb-paper] .ces-ghost{--ces-ghost-color:#8a6a45}',].join("\n");
 
     function installStyles() {
       try {
@@ -778,6 +785,34 @@ var module = { exports: {} };
       var g = DETENT_GATES[Math.min(DETENT_GATES.length - 1, i - 1)];
       if (i === count - 1) g = Math.max(g, DETENT_GATE_MAX);
       return g;
+    }
+
+    /**
+     * 用户定制的「卡扣」手感（非快速模式）：
+     * 档位格点 g_i = i/(count-1)（4 档 = 0·1/3·2/3·1）。
+     *   · 第一段 [0, g_1]：正常跟手；
+     *   · 之后每段 [g_i, g_{i+1})：指针移动**没有反应**，显示钉在 g_i，
+     *     指针到 g_{i+1} 才"啪"地弹到下一格；
+     *   · 越过最高档格点后（指针位置 1 … 2）：显示钉在 g_{n-1}，
+     *     滑块轻微颤动（幅度 0 … 4px，随超出量增长）；
+     *   · 指针位置 ≥ 2：才真正冲进 max（配合粒子 + 虚影）。
+     * 返回 { target, shake }，shake 单位 px。
+     */
+    function stagedTarget(pct, count) {
+      var n = count - 1;
+      if (!(n > 0)) return { target: pct < 0 ? 0 : (pct > 1 ? 1 : pct), shake: 0 };
+      var step = 1 / n;
+      if (pct <= step) {
+        var p0 = pct < 0 ? 0 : pct;
+        return { target: p0, shake: 0 };
+      }
+      if (pct >= 2) return { target: 1, shake: 0 };
+      if (pct >= 1) {
+        return { target: (n - 1) * step, shake: Math.min(4, (pct - 1) * 4) };
+      }
+      var idx = Math.floor(pct * n);
+      if (idx >= n) idx = n - 1;
+      return { target: idx * step, shake: 0 };
     }
 
     function detentPct(pct, count) {
@@ -2304,7 +2339,8 @@ var module = { exports: {} };
         // 与视觉几何一致：指针落点映射到"旋钮圆心能到的那一段"，所以拖到最左/最右必定命中端点档位。
         var usable = rect.width - KNOB_RADIUS * 2;
         if (!(usable > 0)) return null;
-        return clamp01((clientX - rect.left - KNOB_RADIUS) / usable);
+        // 不 clamp：指针可以拖出轨道右侧（最高档蓄力段需要 pct > 1）
+        return (clientX - rect.left - KNOB_RADIUS) / usable;
       }
 
       /** 吞掉事件：滑条在官方的 <button> 里，不能让拖动触发那一行的 onClick（会跳进等级列表）。 */
@@ -2317,8 +2353,24 @@ var module = { exports: {} };
         if (levelCount === 0) return;
         var rawPct = pctAt(clientX);
         if (rawPct === null) return;
-        // 档位门槛：非「快速动画」模式下，跨档要额外走一段（最后一档门槛最大）
-        var pct = motionMode() === "fast" ? rawPct : detentPct(rawPct, levelCount);
+        // 卡扣手感：第一段跟手，之后每段"空档"，到下一格点才弹过去；最高档前蓄力颤动。
+        var shakePx = 0;
+        var pct = rawPct;
+        if (motionMode() === "fast") {
+          pct = Math.max(0, Math.min(1, rawPct));
+        } else {
+          var staged = stagedTarget(rawPct, levelCount);
+          pct = staged.target;
+          shakePx = staged.shake;
+        }
+        try {
+          var shakeTrack = typeof document !== "undefined" ? document.querySelector('[data-ces-part="track"]') : null;
+          if (shakeTrack) {
+            shakeTrack.style.setProperty("--ces-shake", shakePx + "px");
+            if (shakePx > 0.05) shakeTrack.setAttribute("data-shake", "1");
+            else shakeTrack.removeAttribute("data-shake");
+          }
+        } catch (shakeError) { /* 颤动只是观感 */ }
         var m = ensureMotion();
         // 指针速度（EMA 平滑防抖）：用于前馈 + 松手外推。
         // ⚠️ 时间基准必须用**上次 pointermove 的时刻**（lastPointerAtRef），
@@ -2819,8 +2871,6 @@ var module = { exports: {} };
         const box = (menu || track).getBoundingClientRect();
         const width = Math.round(Math.max(360, box.width * 1.7));
         const height = Math.round(width * 1.12);
-        const menuZ = menu ? parseInt(getComputedStyle(menu).zIndex, 10) : NaN;
-        const zIndex = Number.isFinite(menuZ) && menuZ > 0 ? menuZ - 1 : 2147482999;
         const el = document.createElement('div');
         el.className = 'ces-ghost';
         el.setAttribute('data-ces-part', 'ghost');
@@ -2828,7 +2878,6 @@ var module = { exports: {} };
         el.setAttribute('aria-hidden', 'true');
         el.style.width = width + 'px';
         el.style.height = height + 'px';
-        el.style.zIndex = String(zIndex);
         el.style.left = (box.left + box.width / 2) + 'px';
         el.style.top = (box.top + box.height / 2) + 'px';
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -2840,7 +2889,25 @@ var module = { exports: {} };
           svg.appendChild(p);
         }
         el.appendChild(svg);
-        document.body.appendChild(el);
+        // 插进菜单所在的 portal 容器、放在菜单前面：同一个层级里压在菜单下面，
+        // 又高于聊天内容（尾巴不会被消息卡片盖住）。
+        const host = menu && menu.parentElement ? menu.parentElement : document.body;
+        if (menu && menu.parentElement) host.insertBefore(el, menu);
+        else host.appendChild(el);
+        // 粒子迸发：从滑条右端向外散开
+        for (let i = 0; i < 10; i += 1) {
+          const spark = document.createElement('span');
+          spark.className = 'ces-spark';
+          const angle = -Math.PI * (0.12 + Math.random() * 0.76);
+          const dist = 26 + Math.random() * 54;
+          spark.style.left = (box.left + box.width - 6) + 'px';
+          spark.style.top = (box.top + box.height / 2) + 'px';
+          spark.style.setProperty('--ces-dx', (Math.cos(angle) * dist).toFixed(1) + 'px');
+          spark.style.setProperty('--ces-dy', (Math.sin(angle) * dist).toFixed(1) + 'px');
+          spark.style.animationDelay = (Math.random() * 50).toFixed(0) + 'ms';
+          document.body.appendChild(spark);
+          window.setTimeout(() => { if (spark.parentNode) spark.parentNode.removeChild(spark); }, 820);
+        }
         window.setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 520);
       } catch (error) {
         console.error('[workbench] effort ghost failed', error);
@@ -2849,6 +2916,7 @@ var module = { exports: {} };
 
     function watchEffortGhost() {
       let lastKey = null;
+      let lastValueText = null;
       let timer = null;
       let stopped = false;
       const tick = () => {
@@ -2863,6 +2931,19 @@ var module = { exports: {} };
             if (isMax) flashEffortGhost(track);
           }
           lastKey = key;
+          // 档位文字：变化时做一次"滚入"动画（文字块滚动感）
+          try {
+            const valueEl = document.querySelector('[role="menu"] span[class*="cellValue"]');
+            if (valueEl) {
+              const text = String(valueEl.textContent || '').trim();
+              if (lastValueText !== null && text !== lastValueText) {
+                valueEl.classList.remove('ces-roll');
+                void valueEl.offsetWidth;
+                valueEl.classList.add('ces-roll');
+              }
+              lastValueText = text;
+            }
+          } catch (rollError) { /* 只是动效 */ }
         } else {
           lastKey = null;
         }
