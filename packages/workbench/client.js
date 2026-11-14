@@ -1,4 +1,4 @@
-window.__ModuleLoader__.load({
+﻿window.__ModuleLoader__.load({
   id: '@philomelcc/dsh-workbench',
   factory(require) {
     const React = require('react');
@@ -159,6 +159,8 @@ var module = { exports: {} };
       '.ces-spark{position:fixed;width:4px;height:4px;border-radius:50%;background:#cfe3ff;box-shadow:0 0 6px #9ec8ff;pointer-events:none;z-index:2147482998;animation:ces-spark 560ms ease-out forwards}',
       '@keyframes ces-spark{0%{transform:translate(-50%,-50%) scale(1);opacity:.95}100%{transform:translate(calc(-50% + var(--ces-dx,0px)), calc(-50% + var(--ces-dy,0px))) scale(.15);opacity:0}}',
       'body[data-wb-paper] .ces-spark{background:#8a6a45;box-shadow:0 0 6px #a8875c}',
+      '.ces-roll-out{pointer-events:none;animation:ces-value-roll-out 240ms ease-in forwards}',
+      '@keyframes ces-value-roll-out{0%{transform:translateY(0);opacity:1}100%{transform:translateY(-11px);opacity:0}}',
       '.ces-roll{display:inline-block;animation:ces-value-roll 260ms cubic-bezier(.2,.7,.3,1)}',
       '@keyframes ces-value-roll{0%{transform:translateY(9px);opacity:0}45%{transform:translateY(0);opacity:1}100%{transform:translateY(0);opacity:1}}',
 'body[data-wb-paper] .ces-ghost{--ces-ghost-color:#8a6a45}',].join("\n");
@@ -808,11 +810,15 @@ var module = { exports: {} };
       }
       if (pct >= 2) return { target: 1, shake: 0 };
       if (pct >= 1) {
-        return { target: (n - 1) * step, shake: Math.min(4, (pct - 1) * 4) };
+        // 蓄力段：钉在最高档前一格，轻微颤动（更弱：最多 2px）
+        return { target: (n - 1) * step, shake: Math.min(2, (pct - 1) * 2) };
       }
       var idx = Math.floor(pct * n);
       if (idx >= n) idx = n - 1;
-      return { target: idx * step, shake: 0 };
+      // 每一档都「卡住」：段内滑条留在格点上不动，越接近段末越像被顶住（微颤最多 1.6px）
+      var frac = (pct - idx * step) / step;
+      var holdShake = frac > 0.55 ? Math.min(1.6, (frac - 0.55) * 5) : 0;
+      return { target: idx * step, shake: holdShake };
     }
 
     function detentPct(pct, count) {
@@ -2251,19 +2257,8 @@ var module = { exports: {} };
           var m = motionRef.current;
           if (m === null) return;
           var p = motionParams();
-          // max 档更大阻尼：冲向最高档时换成「更粘」的参数——慢半拍、刹车更早，
-          // 落点前有明显的"压住感"，配合虚影闪现更像超频。
-          if (m.target >= 0.999) {
-            p = {
-              K: p.K * 0.22,
-              A: p.A * 0.12,
-              k: p.k * 0.5,
-              amax: p.amax * 0.2,
-              vmax: p.vmax * 0.3,
-              epsX: p.epsX,
-              epsV: p.epsV,
-            };
-          }
+          // 跳档（跨过档位格点）时切到快速参数：啪一下到位，别拖泥带水。
+          if (m.snap) p = MOTION_FAST;
           var dt = Math.min(MAX_FRAME_DT, Math.max(0.001, (ts - lastTsRef.current) / 1000));
           lastTsRef.current = ts;
           // ⚠️ 每帧先让**陈旧的指针速度**衰减（见 decayPointerSpeed 的注释）：
@@ -2275,6 +2270,7 @@ var module = { exports: {} };
           m.vPtr = decayPointerSpeed(m.vPtr, sincePointer, POINTER_STALE_S, POINTER_SPEED_TAU);
           motionStep(m, dt, p);
           if (motionSettled(m, p)) {
+            m.snap = false;
             // 到位：精确落到目标（消除浮点残差）
             m.x = m.target;
             m.v = 0;
@@ -2397,7 +2393,9 @@ var module = { exports: {} };
           detentIndexRef.current = curDetent;
           m.target = pctFromIndex(curDetent, levelCount);
         } else {
+          var prevIdx = indexFromPct(m.target, levelCount);
           m.target = pct; // ← 唯一被改的东西
+          if (levelCount > 0 && indexFromPct(pct, levelCount) !== prevIdx) m.snap = true;
         }
         // 拖动即切档（"拖到哪档就变成哪一档"）：**只在跨档时**写一次。
         if (levelCount > 0) {
@@ -2878,8 +2876,33 @@ var module = { exports: {} };
         el.setAttribute('aria-hidden', 'true');
         el.style.width = width + 'px';
         el.style.height = height + 'px';
-        el.style.left = (box.left + box.width / 2) + 'px';
-        el.style.top = (box.top + box.height / 2) + 'px';
+        // 按视口钳位：旧会话输入框贴在屏幕底部，菜单下方空间不够时把虚影整体上移，
+        // 保证整条剪影（包括尾巴）都在视口里。
+        const vw = (document.documentElement && document.documentElement.clientWidth) || window.innerWidth;
+        const vh = (document.documentElement && document.documentElement.clientHeight) || window.innerHeight;
+        let cx = box.left + box.width / 2;
+        let cy = box.top + box.height / 2;
+        // 预留动画放大空间（缩放峰值 1.09×）
+        const halfW = width * 0.56;
+        const halfH = height * 0.56;
+        if (cx + halfW > vw - 8) cx = vw - 8 - halfW;
+        if (cx - halfW < 8) cx = 8 + halfW;
+        if (cy + halfH > vh - 16) cy = vh - 16 - halfH;
+        if (cy - halfH < 16) cy = 16 + halfH;
+        el.style.left = cx + 'px';
+        el.style.top = cy + 'px';
+        // 布局稳定后再按真实 rect 校正一次（菜单贴底/贴顶时视口高度会变）
+        requestAnimationFrame(() => {
+          try {
+            if (!el.parentNode) return;
+            const rr = el.getBoundingClientRect();
+            const viewH = (document.documentElement && document.documentElement.clientHeight) || window.innerHeight;
+            let topPx = parseFloat(el.style.top) || 0;
+            if (rr.bottom > viewH - 12) topPx -= rr.bottom - (viewH - 12);
+            if (topPx - rr.height / 2 < 12) topPx = 12 + rr.height / 2;
+            el.style.top = topPx + 'px';
+          } catch (fixError) { /* 位置校正失败不影响闪现 */ }
+        });
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.setAttribute('viewBox', GHOST_VIEWBOX);
         svg.setAttribute('preserveAspectRatio', 'xMidYMax meet');
@@ -2889,19 +2912,21 @@ var module = { exports: {} };
           svg.appendChild(p);
         }
         el.appendChild(svg);
-        // 插进菜单所在的 portal 容器、放在菜单前面：同一个层级里压在菜单下面，
-        // 又高于聊天内容（尾巴不会被消息卡片盖住）。
-        const host = menu && menu.parentElement ? menu.parentElement : document.body;
-        if (menu && menu.parentElement) host.insertBefore(el, menu);
-        else host.appendChild(el);
-        // 粒子迸发：从滑条右端向外散开
+        // 挂在 body 末尾（z 自动，低于菜单 portal 层、高于聊天内容）：
+        // 之前插进菜单容器里会被容器裁剪，看不到。
+        document.body.appendChild(el);
+        // 粒子迸发：从「模型席按钮」中心发出
+        const seat = document.querySelector('button[aria-haspopup="menu"][aria-expanded="true"]');
+        const seatRect = seat ? seat.getBoundingClientRect() : null;
+        const sparkX = seatRect ? seatRect.left + seatRect.width / 2 : box.left + box.width - 6;
+        const sparkY = seatRect ? seatRect.top + seatRect.height / 2 : box.top + box.height / 2;
         for (let i = 0; i < 10; i += 1) {
           const spark = document.createElement('span');
           spark.className = 'ces-spark';
-          const angle = -Math.PI * (0.12 + Math.random() * 0.76);
+          const angle = -Math.PI * Math.random();
           const dist = 26 + Math.random() * 54;
-          spark.style.left = (box.left + box.width - 6) + 'px';
-          spark.style.top = (box.top + box.height / 2) + 'px';
+          spark.style.left = sparkX + 'px';
+          spark.style.top = sparkY + 'px';
           spark.style.setProperty('--ces-dx', (Math.cos(angle) * dist).toFixed(1) + 'px');
           spark.style.setProperty('--ces-dy', (Math.sin(angle) * dist).toFixed(1) + 'px');
           spark.style.animationDelay = (Math.random() * 50).toFixed(0) + 'ms';
@@ -2933,10 +2958,24 @@ var module = { exports: {} };
           lastKey = key;
           // 档位文字：变化时做一次"滚入"动画（文字块滚动感）
           try {
-            const valueEl = document.querySelector('[role="menu"] span[class*="cellValue"]');
+            const valueEls = document.querySelectorAll('[role="menu"] span[class*="cellValue"]');
+            const valueEl = valueEls.length > 0 ? valueEls[valueEls.length - 1] : null;
             if (valueEl) {
               const text = String(valueEl.textContent || '').trim();
               if (lastValueText !== null && text !== lastValueText) {
+                try {
+                  // 旧文字留在原位往上滑出，新文字从下方滚入——两块文字一起滚
+                  const cs = getComputedStyle(valueEl);
+                  const pr = valueEl.getBoundingClientRect();
+                  const oldEl = document.createElement('span');
+                  oldEl.textContent = lastValueText;
+                  oldEl.className = 'ces-roll-out';
+                  oldEl.style.cssText = 'position:fixed;pointer-events:none;left:' + pr.left + 'px;top:' + pr.top + 'px;'
+                    + 'color:' + cs.color + ';font-size:' + cs.fontSize + ';font-weight:' + cs.fontWeight
+                    + ';font-family:' + cs.fontFamily + ';line-height:' + cs.lineHeight + ';z-index:2147482997;';
+                  document.body.appendChild(oldEl);
+                  window.setTimeout(() => { if (oldEl.parentNode) oldEl.parentNode.removeChild(oldEl); }, 280);
+                } catch (cloneError) { /* 动效失败不影响切档 */ }
                 valueEl.classList.remove('ces-roll');
                 void valueEl.offsetWidth;
                 valueEl.classList.add('ces-roll');
