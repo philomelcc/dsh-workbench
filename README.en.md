@@ -40,6 +40,7 @@ Besides the navigation layers, the shell ships a few **individually switchable**
 | Restart | on | one-click restart of the web host; **needs an external supervisor**: set `DSH_RESTART_TASK` (a Windows scheduled task name) or `DSH_RESTART_CMD` (any command). Without one the button reports it instead of killing the server |
 | Running glow | on | flowing glow around the session row while it is working |
 | Turn cost | on | token and cost estimate shown after each turn |
+| Effort slider | on | turns the reasoning-level row in the model menu into a segmented, detent-style slider; reaching max flashes a whale-girl silhouette behind the panel (non-commercial asset — see below) |
 
 If you only want the navigation layers, turn the rest off and let another plugin own them — the switches persist in `localStorage`. The settings page also lists the modules that registered a page (they are the tabs in the second row).
 
@@ -104,3 +105,9 @@ scripts/check.mjs          node --check across every shipped script
 ## License
 
 MIT.
+
+## Materials and third-party terms
+
+- The "reasoning effort slider" is ported from [dsh-codex-effort-slider](https://github.com/Microqian2th/dsh-codex-effort-slider) (**MIT, © Microqian2th**); its licence and copyright notice are kept in the corresponding source block.
+- The whale-girl silhouette that flashes at max is based on the **"big fat fish" character by ZipZipPipe**, licensed **CC BY-NC-SA 4.0**: non-commercial use only, attribution and share-alike required. Do not use this asset commercially; replace it if you need to.
+- The silhouette is a vector outline traced from the author's original artwork (a 1152×2048 transparent-background illustration) and is only rendered inside the workbench window.

@@ -1,6 +1,6 @@
 {
   "name": "@philomelcc/dsh-workbench",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "type": "module",
   "description": "Workbench shell for DeepSeek Harness: a view/page module API, shared UI primitives and a top-bar switcher.",
   "license": "MIT",
@@ -14,20 +14,34 @@
   "bugs": {
     "url": "https://github.com/philomelcc/dsh-workbench/issues"
   },
-  "keywords": ["dsh", "deepseek-harness", "workbench", "plugin", "web-ui"],
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "workbench",
+    "plugin",
+    "web-ui"
+  ],
   "exports": {
     ".": "./index.js",
     "./client": "./client.js",
     "./locale/*.json": "./locale/*.json",
     "./icon": "./icon.svg"
   },
-  "files": ["index.js", "client.js", "cordis.patch.yml", "locale/*.json", "icon.svg"],
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg"
+  ],
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
   },
   "dsh": {
-    "bundle": { "patch": "./cordis.patch.yml" },
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
     "client": {
       "platform": "web",
       "inject": [
