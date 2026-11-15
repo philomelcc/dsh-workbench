@@ -4160,10 +4160,18 @@ var module = { exports: {} };
       '--dsw-static-violet-400': '#a8875c',
     };
 
+    // Paper-only rules the token layer cannot express. The light palette's
+    // ordering is: page (darker sheet) -> cards brighter on top -> controls
+    // and selected states one step darker. Every rule below keeps that order
+    // and re-declares :hover so the !important backgrounds don't eat the
+    // hover feedback.
     const PAPER_RULES = `
 body[data-wb-paper="1"] .VOzbGW_panel { background: #f7f3ea !important; }
-body[data-wb-paper="1"] .rtSEdW_card { border-width: 1px; background: #f7f3ea !important; }
-body[data-wb-paper="1"] .rtSEdW_cardActive { border-color: #c6bba2 !important; background: #f2ece0 !important; }
+/* Agent preset cards: brighter than the panel, hover/selected go darker. */
+body[data-wb-paper="1"] .rtSEdW_card { border-width: 1px; background: #fbf6ec !important; }
+body[data-wb-paper="1"] .rtSEdW_card:hover { background: #f2ece0 !important; }
+body[data-wb-paper="1"] .rtSEdW_cardActive,
+body[data-wb-paper="1"] .rtSEdW_cardActive:hover { border-color: #c6bba2 !important; background: #f2ece0 !important; }
 body[data-wb-paper="1"] .rtSEdW_cardMain,
 body[data-wb-paper="1"] .rtSEdW_cardHead,
 body[data-wb-paper="1"] .rtSEdW_cardIdentity,
@@ -4171,14 +4179,28 @@ body[data-wb-paper="1"] .rtSEdW_cardId,
 body[data-wb-paper="1"] .rtSEdW_cardDesc,
 body[data-wb-paper="1"] .rtSEdW_cardHelp,
 body[data-wb-paper="1"] .rtSEdW_cardFoot { background: transparent !important; }
-body[data-wb-paper="1"] ._8HJdBW_themeCube { border-width: 1px; background: #f7f3ea !important; }
-body[data-wb-paper="1"] ._8HJdBW_themeCube._8HJdBW_selected { background: #f2ece0 !important; }
+/* Appearance cubes: unselected bright, hover darker, selected darker. */
+body[data-wb-paper="1"] ._8HJdBW_themeCube { border-width: 1px; background: #fbf6ec !important; }
+body[data-wb-paper="1"] ._8HJdBW_themeCube:hover { background: #f2ece0 !important; }
+body[data-wb-paper="1"] ._8HJdBW_themeCube._8HJdBW_selected,
+body[data-wb-paper="1"] ._8HJdBW_themeCube._8HJdBW_selected:hover { background: #f2ece0 !important; }
+/* Settings page cards (built-in plugin list). */
+body[data-wb-paper="1"] .qSYn7G_card,
+body[data-wb-paper="1"] .qSYn7G_cardContent { background: #fbf6ec !important; }
+body[data-wb-paper="1"] .qSYn7G_card:hover,
+body[data-wb-paper="1"] .qSYn7G_card:hover .qSYn7G_cardContent { background: #f2ece0 !important; }
+/* Dropdown/select pills. */
 body[data-wb-paper="1"] ._root_70kcw_1 { background: #f2ece0 !important; border-radius: 8px; }
+/* Plugin page rows: the list sits directly on the page, so the rows stay
+   transparent (hover still gives feedback). */
 body[data-wb-paper="1"] .X_2TxG_card,
 body[data-wb-paper="1"] .X_2TxG_cardHead,
 body[data-wb-paper="1"] .X_2TxG_cardMain,
-body[data-wb-paper="1"] .X_2TxG_cards { background: transparent !important; }
+body[data-wb-paper="1"] .X_2TxG_cards,
+body[data-wb-paper="1"] .X_2TxG_cardDesc { background: transparent !important; }
+body[data-wb-paper="1"] .X_2TxG_card:hover { background: #f2ece0 !important; }
 `;
+
 
     // Swatches double as both the current-state indicator and the toggle.
     const THEME_SWATCHES = [
