@@ -5037,6 +5037,22 @@ body[data-wb-paper="1"] [class*="_hoverTime"] {
 body[data-wb-paper="1"] [class*="_hoverPath"] {
   color: #6f6557 !important;
 }
+/* DSH 0.2.2 paints the settings preset cards with a 0.5px stroke. At
+   fractional device-pixel ratios that sub-pixel line drops out on some
+   edges, so the card frame looked broken (bottom-left edge missing) on
+   paper where the low-contrast stroke hides it even further. Give paper a
+   real 1px stroke. `.rtSEdW_card` is the 0.2.2 CSS-module class; if a future
+   DSH renames it this rule simply stops matching. */
+body[data-wb-paper="1"] .rtSEdW_card {
+  border-width: 1px;
+}
+/* The preset card paints main and footer as two stacked surfaces; on paper
+   they must read as one card (the footer used a brighter layer, which is the
+   white band that looked like colour bleed). */
+body[data-wb-paper="1"] .rtSEdW_cardMain,
+body[data-wb-paper="1"] .rtSEdW_cardFoot {
+  background: transparent;
+}
 `;
 
     // The native "running" spinner is hidden only while the glow is on. This
