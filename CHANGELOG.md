@@ -3,6 +3,12 @@
 按包分节记录变更，版本号是各自包的 semver（外壳在本仓库，模块在各自仓库）。
 0.1.8 及更早的版本没有留档，可查 `git log` 或 npm 上对应版本的 tarball。
 
+## @philomelcc/dsh-workbench 0.1.14
+
+### 修复
+
+- 纸色主题补全**官方设置/插件页**的叠加色 token：`--dsw-alias-interactive-bg-hover/active/hover-accent/hover-danger`、`--dsw-alias-border-l3/l4`、`--dsw-alias-menu-group-header-fill`、`--dsw-alias-bg-skeleton`、`--dsw-alias-bg-mask-drop`。这些 token 原本是黑色/蓝黑半透明叠加，纸色层一直没覆盖——叠在暖纸底上变成冷灰，于是官方设置面板的行、卡片、选中态颜色互相打架（DSH 0.2.2 重做设置面板后大量使用这些 token，问题更显眼）。
+
 ## @philomelcc/dsh-workbench 0.1.13
 
 ### 文档

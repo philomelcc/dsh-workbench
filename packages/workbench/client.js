@@ -1,4 +1,4 @@
-﻿window.__ModuleLoader__.load({
+window.__ModuleLoader__.load({
   id: '@philomelcc/dsh-workbench',
   factory(require) {
     const React = require('react');
@@ -4061,6 +4061,19 @@ var module = { exports: {} };
       '--dsw-static-neutral-bluish-700': '#6f6557',
       '--dsw-static-neutral-bluish-750': '#4f473a',
       '--dsw-static-neutral-bluish-800': '#3b342a',
+      // The official settings panel (0.2.2) paints its rows, list items and
+      // cards from the interactive / border / menu-group aliases, which are
+      // black or blue-black overlays. On paper they read as cool grey smears,
+      // so every row looked a different colour. Warm the whole overlay set.
+      '--dsw-alias-interactive-bg-hover': '#3b342a0f',
+      '--dsw-alias-interactive-bg-active': '#3b342a1a',
+      '--dsw-alias-interactive-bg-hover-accent': '#8a6a4524',
+      '--dsw-alias-interactive-bg-hover-danger': '#a34a3c0d',
+      '--dsw-alias-border-l3': '#3b342a1f',
+      '--dsw-alias-border-l4': '#3b342a29',
+      '--dsw-alias-menu-group-header-fill': '#f2ece0f0',
+      '--dsw-alias-bg-skeleton': '#3b342a0a',
+      '--dsw-alias-bg-mask-drop': '#faf5e9b3',
     };
 
     // Swatches double as both the current-state indicator and the toggle.
