@@ -7,6 +7,8 @@
 
 ### 修复
 
+- **纸色层次方向修正**：之前 `bg-layer-1`（#f2ece0）比页面底（#f7f3ea）还暗，纸色里的卡片、面板全部"下沉"，同一张卡片内混用不同层级的区域就出现两截色（设置面板的「颜色溢出/错配」）。现在按浅色主题的层次方向重排：页面 `#f7f3ea` → 卡片 `#fbf6ec`（亮）→ 次级 `#f2ece0` → 浮层 `#fffdf6`。
+- **官方设置卡片**：0.2.2 的设置面板卡片背景来自 `--dsw-alias-settings-card-fill`（= `bg-layer-2`）、描边来自 `--dsw-alias-settings-card-stroke`（= `border-l4`），纸色层没覆盖这两个；现在直接覆盖成纸色（`#fbf6ec` / `#d8cfba`），卡片不再下沉、框线完整。
 - 纸色主题补全**官方设置/插件页**的叠加色 token：`--dsw-alias-interactive-bg-hover/active/hover-accent/hover-danger`、`--dsw-alias-border-l3/l4`、`--dsw-alias-menu-group-header-fill`、`--dsw-alias-bg-skeleton`、`--dsw-alias-bg-mask-drop`。这些 token 原本是黑色/蓝黑半透明叠加，纸色层一直没覆盖——叠在暖纸底上变成冷灰，于是官方设置面板的行、卡片、选中态颜色互相打架（DSH 0.2.2 重做设置面板后大量使用这些 token，问题更显眼）。
 
 ## @philomelcc/dsh-workbench 0.1.13

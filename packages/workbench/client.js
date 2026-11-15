@@ -4000,10 +4000,14 @@ var module = { exports: {} };
     const SCHEME_KEY = 'dsh-workbench:scheme';
     const LEGACY_PAPER_KEY = 'dsh-workbench:paper';
     const PAPER_TOKENS = {
+      // Elevation order matters: on paper the page is the darker sheet and
+      // cards sit *above* it (light theme: grey page, white cards). The
+      // previous ramp had layer-1 darker than base, so cards sank below the
+      // page and every panel that mixed the two read as a colour mismatch.
       '--dsw-alias-bg-base': '#f7f3ea',
-      '--dsw-alias-bg-layer-1': '#f2ece0',
-      '--dsw-alias-bg-layer-2': '#ece5d6',
-      '--dsw-alias-bg-overlay': '#faf5e9',
+      '--dsw-alias-bg-layer-1': '#fbf6ec',
+      '--dsw-alias-bg-layer-2': '#f2ece0',
+      '--dsw-alias-bg-overlay': '#fffdf6',
       '--dsw-alias-border-l1': '#d8cfba',
       '--dsw-alias-border-l2': '#c6bba2',
       '--dsw-alias-brand-primary': '#8a6a45',
@@ -4030,9 +4034,9 @@ var module = { exports: {} };
       '--dsw-specific-sidebar-nav-item-active-accent': '#f1e9da',
       '--dsw-specific-sidebar-nav-item-active': '#efe9db',
       '--dsw-specific-selector': '#f1e9da',
-      '--dsw-specific-input-major': '#f2ece0',
-      '--dsw-specific-tip': '#f7f2e7',
-      '--dsw-specific-menu': '#fcf9f3',
+      '--dsw-specific-input-major': '#fbf6ec',
+      '--dsw-specific-tip': '#fbf6ec',
+      '--dsw-specific-menu': '#fffdf6',
       // Scrollbars read their own alias pair and default to neutral grey.
       '--dsw-alias-scrollbar-bg-l1': '#d8cfba',
       '--dsw-alias-scrollbar-bg-l2': '#d8cfba',
@@ -4074,6 +4078,13 @@ var module = { exports: {} };
       '--dsw-alias-menu-group-header-fill': '#f2ece0f0',
       '--dsw-alias-bg-skeleton': '#3b342a0a',
       '--dsw-alias-bg-mask-drop': '#faf5e9b3',
+      // The settings panel derives its cards from these two aliases
+      // (`settings-card-fill: bg-layer-2`, `settings-card-stroke: border-l4`).
+      // Layer-2 sits *below* the page on paper, so every settings card looked
+      // sunken and its two halves read as different colours. Pin the card to
+      // its own paper tone above the page and give it a warm stroke.
+      '--dsw-alias-settings-card-fill': '#fbf6ec',
+      '--dsw-alias-settings-card-stroke': '#d8cfba',
     };
 
     // Swatches double as both the current-state indicator and the toggle.
