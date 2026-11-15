@@ -4007,7 +4007,7 @@ var module = { exports: {} };
       '--dsw-alias-bg-base': '#f7f3ea',
       '--dsw-alias-bg-document-preview': '#f2ece0',
       '--dsw-alias-bg-layer-1': '#f7f3ea',
-      '--dsw-alias-bg-layer-2': '#f2ece0',
+      '--dsw-alias-bg-layer-2': '#f7f3ea',
       '--dsw-alias-bg-layer-3': '#f7f3ea',
       '--dsw-alias-bg-mask-1': '#0000003d',
       '--dsw-alias-bg-mask-2': '#0000001f',
@@ -4016,7 +4016,7 @@ var module = { exports: {} };
       '--dsw-alias-bg-mask-photo': '#000000e0',
       '--dsw-alias-bg-module-platform': '#f2ece0',
       '--dsw-alias-bg-multi-select': '#f2ece0',
-      '--dsw-alias-bg-overlay': '#fbf6ec',
+      '--dsw-alias-bg-overlay': '#ece5d6',
       '--dsw-alias-bg-skeleton': '#3b342a0a',
       '--dsw-alias-border-inverted': '#0000',
       '--dsw-alias-border-inverted2': '#0000',
@@ -4029,8 +4029,8 @@ var module = { exports: {} };
       '--dsw-alias-brand-primary-invert': '#3b342a',
       '--dsw-alias-brand-text': '#3b342a',
       '--dsw-alias-button-contrast-fill': '#6f6557',
-      '--dsw-alias-button-elevated-fill': '#fbf6ec',
-      '--dsw-alias-button-floating-fill': '#fbf6ec',
+      '--dsw-alias-button-elevated-fill': '#f7f3ea',
+      '--dsw-alias-button-floating-fill': '#f7f3ea',
       '--dsw-alias-button-floating-hover': '#f2ece0',
       '--dsw-alias-button-ghost-active-border': '#c6bba2',
       '--dsw-alias-button-ghost-active-fill': '#f2ece0',
@@ -4038,9 +4038,9 @@ var module = { exports: {} };
       '--dsw-alias-button-primary-dimmed': '#f2ece0',
       '--dsw-alias-button-primary-fill': '#3b342a',
       '--dsw-alias-button-primary-hover': '#4f473a',
-      '--dsw-alias-card-fill': '#fbf6ec',
+      '--dsw-alias-card-fill': '#f7f3ea',
       '--dsw-alias-card-fill-hover': '#f2ece0',
-      '--dsw-alias-card-tile-fill': '#fbf6ec',
+      '--dsw-alias-card-tile-fill': '#f7f3ea',
       '--dsw-alias-chart-system': '#ece5d6',
       '--dsw-alias-file-diff-added-bg': '#e6f1e0',
       '--dsw-alias-file-diff-added-gutter': '#eef6e6',
@@ -4073,12 +4073,12 @@ var module = { exports: {} };
       '--dsw-alias-label-secondary': '#6f6557',
       '--dsw-alias-label-shimmer': '#3b342a',
       '--dsw-alias-label-tertiary': '#8a7f6e',
-      '--dsw-alias-markdown-citation': '#efe6d4',
-      '--dsw-alias-markdown-code-block': '#f2ece0',
-      '--dsw-alias-markdown-code-block-banner': '#f2ece0',
-      '--dsw-alias-markdown-code-segment-selected': '#fbf6ec',
+      '--dsw-alias-markdown-citation': '#f4eee1',
+      '--dsw-alias-markdown-code-block': '#f4eee1',
+      '--dsw-alias-markdown-code-block-banner': '#f4eee1',
+      '--dsw-alias-markdown-code-segment-selected': '#f7f3ea',
       '--dsw-alias-markdown-code-segment-unselected': '#f2ece0',
-      '--dsw-alias-markdown-inline-code': '#efe6d4',
+      '--dsw-alias-markdown-inline-code': '#f4eee1',
       '--dsw-alias-markdown-placeholder': '#f7f3ea',
       '--dsw-alias-markdown-tag': '#f7f3ea',
       '--dsw-alias-menu-group-header-fill': '#f2ece0f0',
@@ -4103,9 +4103,9 @@ var module = { exports: {} };
       '--dsw-specific-bubble': '#f2ecdf',
       '--dsw-specific-bubble-highlight': '#e9dfcb',
       '--dsw-specific-guide-hero': '#ece5d6',
-      '--dsw-specific-input-major': '#fbf6ec',
+      '--dsw-specific-input-major': '#f7f3ea',
       '--dsw-specific-login-input': '#f7f3ea',
-      '--dsw-specific-menu': '#fbf6ec',
+      '--dsw-specific-menu': '#f8f3e8b3',
       '--dsw-specific-selector': '#f2ece0',
       '--dsw-specific-sidebar-fill': '#f2ece0',
       '--dsw-specific-sidebar-glass-fill': '#fbf6ec8c',
@@ -4113,7 +4113,7 @@ var module = { exports: {} };
       '--dsw-specific-sidebar-nav-item-active': '#efe9db',
       '--dsw-specific-sidebar-nav-item-active-accent': '#f1e9da',
       '--dsw-specific-sidebar-tint': '#f7f3ea',
-      '--dsw-specific-tip': '#f7f3ea',
+      '--dsw-specific-tip': '#f2ece0',
       '--dsw-static-amber-100': '#f5ecdd',
       '--dsw-static-blue-100': '#efe6d4',
       '--dsw-static-blue-300': '#c6bba2',
@@ -4165,10 +4165,13 @@ var module = { exports: {} };
     // and selected states one step darker. Every rule below keeps that order
     // and re-declares :hover so the !important backgrounds don't eat the
     // hover feedback.
+    // Paper-only rules. Light palette facts (measured): page #fff, layer
+    // fills #fff (== page), card fill #fafafa (near page), selected/controls
+    // #f5f6f7. Paper keeps the same order: page #f7f3ea, cards fill with the
+    // page colour, hover/selected go one step darker (#f2ece0).
     const PAPER_RULES = `
 body[data-wb-paper="1"] .VOzbGW_panel { background: #f7f3ea !important; }
-/* Agent preset cards: brighter than the panel, hover/selected go darker. */
-body[data-wb-paper="1"] .rtSEdW_card { border-width: 1px; background: #fbf6ec !important; }
+body[data-wb-paper="1"] .rtSEdW_card { border-width: 1px; background: #f7f3ea !important; }
 body[data-wb-paper="1"] .rtSEdW_card:hover { background: #f2ece0 !important; }
 body[data-wb-paper="1"] .rtSEdW_cardActive,
 body[data-wb-paper="1"] .rtSEdW_cardActive:hover { border-color: #c6bba2 !important; background: #f2ece0 !important; }
@@ -4179,27 +4182,34 @@ body[data-wb-paper="1"] .rtSEdW_cardId,
 body[data-wb-paper="1"] .rtSEdW_cardDesc,
 body[data-wb-paper="1"] .rtSEdW_cardHelp,
 body[data-wb-paper="1"] .rtSEdW_cardFoot { background: transparent !important; }
-/* Appearance cubes: unselected bright, hover darker, selected darker. */
-body[data-wb-paper="1"] ._8HJdBW_themeCube { border-width: 1px; background: #fbf6ec !important; }
+body[data-wb-paper="1"] .uV2eYG_card { background: transparent !important; }
+body[data-wb-paper="1"] ._8HJdBW_themeCube { border-width: 1px; background: #f7f3ea !important; }
 body[data-wb-paper="1"] ._8HJdBW_themeCube:hover { background: #f2ece0 !important; }
 body[data-wb-paper="1"] ._8HJdBW_themeCube._8HJdBW_selected,
 body[data-wb-paper="1"] ._8HJdBW_themeCube._8HJdBW_selected:hover { background: #f2ece0 !important; }
-/* Settings page cards (built-in plugin list). */
-body[data-wb-paper="1"] .qSYn7G_card { background: #fbf6ec !important; }
+body[data-wb-paper="1"] .qSYn7G_card { background: #f7f3ea !important; }
+body[data-wb-paper="1"] .qSYn7G_cards,
+body[data-wb-paper="1"] .qSYn7G_cardDescription,
+body[data-wb-paper="1"] .qSYn7G_cardMeta,
+body[data-wb-paper="1"] .qSYn7G_cardMainRow,
+body[data-wb-paper="1"] .qSYn7G_cardTitle,
+body[data-wb-paper="1"] .qSYn7G_cardTrailing { background: transparent !important; }
+
 body[data-wb-paper="1"] .qSYn7G_cardContent { background: transparent !important; }
 body[data-wb-paper="1"] .qSYn7G_card:hover,
 body[data-wb-paper="1"] .qSYn7G_card:hover .qSYn7G_cardContent { background: #f2ece0 !important; }
-/* Dropdown/select pills. */
-body[data-wb-paper="1"] ._root_70kcw_1 { background: #f2ece0 !important; border-radius: 8px; }
-/* Plugin page rows: the list sits directly on the page, so the rows stay
-   transparent (hover still gives feedback). */
 body[data-wb-paper="1"] .X_2TxG_card,
 body[data-wb-paper="1"] .X_2TxG_cardHead,
 body[data-wb-paper="1"] .X_2TxG_cardMain,
 body[data-wb-paper="1"] .X_2TxG_cards,
-body[data-wb-paper="1"] .X_2TxG_cardDesc { background: transparent !important; }
+body[data-wb-paper="1"] .X_2TxG_cardDesc,
+body[data-wb-paper="1"] .X_2TxG_cardIcon,
+body[data-wb-paper="1"] .X_2TxG_cardEnd,
+body[data-wb-paper="1"] .X_2TxG_cardTitle,
+body[data-wb-paper="1"] .X_2TxG_cardOpen { background: transparent !important; }
 body[data-wb-paper="1"] .X_2TxG_card:hover { background: #f2ece0 !important; }
 `;
+
 
 
     // Swatches double as both the current-state indicator and the toggle.
